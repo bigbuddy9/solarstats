@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
@@ -59,7 +58,6 @@ function inputClass(hasError?: boolean) {
 }
 
 export default function CallForm() {
-  const router = useRouter()
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState('')
 
@@ -90,10 +88,7 @@ export default function CallForm() {
 
     setSuccess(true)
     reset({ call_date: new Date().toISOString().slice(0, 16) })
-    setTimeout(() => {
-      setSuccess(false)
-      router.push('/dashboard')
-    }, 1500)
+    setTimeout(() => setSuccess(false), 3000)
   }
 
   return (
