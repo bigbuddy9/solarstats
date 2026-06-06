@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-color: #f97316;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-950 text-gray-100 antialiased;
+  }
+}
+
+@layer utilities {
+  .text-brand {
+    color: var(--brand-color);
+  }
+  .bg-brand {
+    background-color: var(--brand-color);
+  }
+  .border-brand {
+    border-color: var(--brand-color);
+  }
+  .ring-brand {
+    --tw-ring-color: var(--brand-color);
+  }
+}
