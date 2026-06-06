@@ -41,7 +41,7 @@ const OUTCOME_COLORS: Record<CallOutcome, string> = {
   disqualified: '#ef4444',
   'no-show': '#f59e0b',
   cancelled: '#6b7280',
-  booked: '#3b82f6',
+  booked: '#a3a3a3',
   closed: '#a855f7',
 }
 

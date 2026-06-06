@@ -12,7 +12,7 @@ const OUTCOME_BADGES: Record<CallOutcome, string> = {
   disqualified: 'bg-red-900/40 text-red-400 border-red-800',
   'no-show': 'bg-yellow-900/40 text-yellow-400 border-yellow-800',
   cancelled: 'bg-gray-800 text-gray-400 border-gray-700',
-  booked: 'bg-blue-900/40 text-blue-400 border-blue-800',
+  booked: 'bg-neutral-800 text-neutral-300 border-neutral-600',
   closed: 'bg-purple-900/40 text-purple-400 border-purple-800',
 }
 

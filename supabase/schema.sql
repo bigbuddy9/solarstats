@@ -20,7 +20,7 @@ create table if not exists settings (
   id uuid primary key default gen_random_uuid(),
   business_name text not null default 'Scale Solar',
   logo_url text default '',
-  brand_color text default '#f97316',
+  brand_color text default '#eab308',
   subdomain text default ''
 );
 
@@ -49,5 +49,5 @@ alter publication supabase_realtime add table calls;
 
 -- Insert default settings row (edit values before running)
 insert into settings (business_name, logo_url, brand_color, subdomain)
-values ('Scale Solar', '', '#f97316', 'client1')
+values ('Scale Solar', '', '#eab308', 'client1')
 on conflict do nothing;
