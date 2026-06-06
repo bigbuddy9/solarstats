@@ -1,4 +1,5 @@
 -- Run this in each client's Supabase SQL editor to set up their project
+-- Also enable Replication in Supabase Dashboard → Database → Replication → calls table (for real-time)
 
 -- Calls table
 create table if not exists calls (
@@ -42,6 +43,9 @@ create policy "Authenticated users can update calls"
 create policy "Authenticated users can read settings"
   on settings for select
   using (auth.role() = 'authenticated');
+
+-- Enable realtime for the calls table
+alter publication supabase_realtime add table calls;
 
 -- Insert default settings row (edit values before running)
 insert into settings (business_name, logo_url, brand_color, subdomain)
