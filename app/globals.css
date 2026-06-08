@@ -8,21 +8,25 @@
 
 @layer base {
   body {
-    @apply bg-gray-950 text-gray-100 antialiased;
+    @apply bg-black text-gray-100 antialiased;
+  }
+
+  input, select, textarea {
+    color-scheme: dark;
+  }
+
+  /* Kill browser blue focus ring globally */
+  *:focus {
+    outline: none;
+  }
+  *:focus-visible {
+    outline: 2px solid var(--brand-color);
+    outline-offset: 2px;
   }
 }
 
 @layer utilities {
-  .text-brand {
-    color: var(--brand-color);
-  }
-  .bg-brand {
-    background-color: var(--brand-color);
-  }
-  .border-brand {
-    border-color: var(--brand-color);
-  }
-  .ring-brand {
-    --tw-ring-color: var(--brand-color);
-  }
+  .text-brand { color: var(--brand-color); }
+  .bg-brand { background-color: var(--brand-color); }
+  .border-brand { border-color: var(--brand-color); }
 }

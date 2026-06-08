@@ -11,28 +11,28 @@ export default async function LogCallPage() {
   const s = settings as Settings | null
 
   return (
-    <div className="min-h-screen bg-gray-950 px-4 py-10">
-      <div className="w-full max-w-xl mx-auto">
-
-        {/* Business name */}
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-white">{s?.business_name ?? 'Scale Solar'}</h1>
-          <p className="text-gray-400 text-sm mt-1">Fill this out as soon as you finish a call.</p>
+    <div className="min-h-screen bg-black">
+      {/* Top bar */}
+      <div className="border-b border-white/5 px-6 py-4 flex items-center justify-between max-w-2xl mx-auto">
+        <div className="flex items-center gap-2.5">
+          <div className="h-2 w-2 rounded-full bg-brand" />
+          <span className="text-sm font-semibold text-white tracking-wide uppercase">
+            {s?.business_name ?? 'Scale Solar'}
+          </span>
         </div>
-
-        <CallForm />
-
-        {/* Login link — subtle, out of the way */}
-        <div className="mt-6 text-center">
-          <a
-            href="/login"
-            className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-          >
-            Login to view dashboard
-          </a>
-        </div>
-
+        <a href="/login" className="text-xs text-gray-600 hover:text-yellow-400 transition-colors">
+          Dashboard →
+        </a>
       </div>
+
+      {/* Main */}
+      <main className="max-w-2xl mx-auto px-6 py-12">
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-white">Post-Call Log</h1>
+          <p className="text-gray-500 mt-2">Fill this out immediately after every appointment.</p>
+        </div>
+        <CallForm />
+      </main>
     </div>
   )
 }

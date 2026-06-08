@@ -7,9 +7,9 @@ import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
-  caller_name: z.string().min(1, 'Name is required'),
-  caller_phone: z.string().min(1, 'Phone is required'),
-  call_date: z.string().min(1, 'Date is required'),
+  caller_name: z.string().min(1, 'Required'),
+  caller_phone: z.string().min(1, 'Required'),
+  call_date: z.string().min(1, 'Required'),
   outcome: z.enum(['qualified', 'disqualified', 'no-show', 'cancelled', 'booked', 'closed']),
   monthly_bookings: z.string().min(1, 'Required'),
   close_rate: z.string().min(1, 'Required'),
@@ -27,34 +27,44 @@ const MONTHLY_BOOKING_OPTIONS = [
   '40+ calls/month',
 ]
 
-const CLOSE_RATE_OPTIONS = [
-  'Under 10%',
-  '10% - 20%',
-  '20% - 30%',
-  '30% - 40%',
-  '40%+',
+const CLOSE_RATE_OPTIONS = ['Under 10%', '10% - 20%', '20% - 30%', '30% - 40%', '40%+']
+
+const REVENUE_OPTIONS = ['$0 - $5k', '$5k - $10k', '$10k - $25k', '$25k - $50k', '$50k - $100k', '$100k+']
+
+const OUTCOMES = [
+  { value: 'qualified', label: 'Qualified' },
+  { value: 'disqualified', label: 'Disqualified' },
+  { value: 'no-show', label: 'No-show' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'booked', label: 'Booked' },
+  { value: 'closed', label: 'Closed' },
 ]
 
-const REVENUE_OPTIONS = [
-  '$0 - $5k',
-  '$5k - $10k',
-  '$10k - $25k',
-  '$25k - $50k',
-  '$50k - $100k',
-  '$100k+',
-]
-
-function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="block text-sm font-medium text-gray-300 mb-1.5">
+    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
       {children}
-      {required && <span className="text-red-400 ml-0.5">*</span>}
     </label>
   )
 }
 
-function inputClass(hasError?: boolean) {
-  return `w-full bg-gray-800 border ${hasError ? 'border-red-600' : 'border-gray-700'} rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm`
+function inputCls(err?: boolean) {
+  return `w-full bg-white/5 border ${err ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-white placeholder-gray-600 text-sm transition-colors hover:border-white/20 focus:border-brand focus:bg-white/8`
+}
+
+function ErrMsg({ msg }: { msg?: string }) {
+  if (!msg) return null
+  return <p className="text-red-400 text-xs mt-1.5">{msg}</p>
+}
+
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className="flex-1 h-px bg-white/5" />
+      <span className="text-xs text-gray-600 uppercase tracking-widest">{label}</span>
+      <div className="flex-1 h-px bg-white/5" />
+    </div>
+  )
 }
 
 export default function CallForm() {
@@ -68,139 +78,119 @@ export default function CallForm() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      call_date: new Date().toISOString().slice(0, 16),
-    },
+    defaultValues: { call_date: new Date().toISOString().slice(0, 16) },
   })
 
   async function onSubmit(data: FormData) {
     setServerError('')
-
-    const { error } = await supabase.from('calls').insert([{
-      ...data,
-      notes: data.notes ?? '',
-    }])
-
-    if (error) {
-      setServerError(error.message)
-      return
-    }
-
+    const { error } = await supabase.from('calls').insert([{ ...data, notes: data.notes ?? '' }])
+    if (error) { setServerError(error.message); return }
     setSuccess(true)
     reset({ call_date: new Date().toISOString().slice(0, 16) })
-    setTimeout(() => setSuccess(false), 3000)
+    setTimeout(() => setSuccess(false), 4000)
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
       {success && (
-        <div className="bg-green-900/30 border border-green-700 text-green-400 rounded-lg px-4 py-3 text-sm">
-          Call logged successfully! Redirecting to dashboard…
+        <div className="flex items-center gap-3 bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-5 py-4">
+          <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" />
+          <p className="text-yellow-300 text-sm font-medium">Call logged. Good work — on to the next one.</p>
         </div>
       )}
 
       {serverError && (
-        <div className="bg-red-900/20 border border-red-700 text-red-400 rounded-lg px-4 py-3 text-sm">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-5 py-4 text-red-400 text-sm">
           {serverError}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {/* Who + When */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <FieldLabel required>Caller Name</FieldLabel>
-          <input
-            {...register('caller_name')}
-            placeholder="John Smith"
-            className={inputClass(!!errors.caller_name)}
-          />
-          {errors.caller_name && <p className="text-red-400 text-xs mt-1">{errors.caller_name.message}</p>}
+          <Label>Caller Name</Label>
+          <input {...register('caller_name')} placeholder="John Smith" className={inputCls(!!errors.caller_name)} />
+          <ErrMsg msg={errors.caller_name?.message} />
         </div>
-
         <div>
-          <FieldLabel required>Phone Number</FieldLabel>
-          <input
-            {...register('caller_phone')}
-            placeholder="(555) 000-0000"
-            className={inputClass(!!errors.caller_phone)}
-          />
-          {errors.caller_phone && <p className="text-red-400 text-xs mt-1">{errors.caller_phone.message}</p>}
+          <Label>Phone Number</Label>
+          <input {...register('caller_phone')} placeholder="(555) 000-0000" className={inputCls(!!errors.caller_phone)} />
+          <ErrMsg msg={errors.caller_phone?.message} />
         </div>
       </div>
 
       <div>
-        <FieldLabel required>Call Date &amp; Time</FieldLabel>
-        <input
-          type="datetime-local"
-          {...register('call_date')}
-          className={inputClass(!!errors.call_date)}
-        />
-        {errors.call_date && <p className="text-red-400 text-xs mt-1">{errors.call_date.message}</p>}
+        <Label>Call Date &amp; Time</Label>
+        <input type="datetime-local" {...register('call_date')} className={inputCls(!!errors.call_date)} />
+        <ErrMsg msg={errors.call_date?.message} />
       </div>
 
-      <div>
-        <FieldLabel required>Outcome</FieldLabel>
-        <select {...register('outcome')} className={inputClass(!!errors.outcome)}>
-          <option value="">Select outcome…</option>
-          <option value="qualified">Qualified</option>
-          <option value="disqualified">Disqualified</option>
-          <option value="no-show">No-show</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="booked">Booked</option>
-          <option value="closed">Closed</option>
-        </select>
-        {errors.outcome && <p className="text-red-400 text-xs mt-1">{errors.outcome.message}</p>}
-      </div>
+      <Divider label="Call Result" />
 
+      {/* Outcome — pill selector */}
       <div>
-        <FieldLabel required>Monthly Booking Volume</FieldLabel>
-        <select {...register('monthly_bookings')} className={inputClass(!!errors.monthly_bookings)}>
-          <option value="">Select volume…</option>
-          {MONTHLY_BOOKING_OPTIONS.map(o => (
-            <option key={o} value={o}>{o}</option>
+        <Label>Outcome</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {OUTCOMES.map(o => (
+            <label key={o.value} className="cursor-pointer">
+              <input type="radio" value={o.value} {...register('outcome')} className="sr-only peer" />
+              <div className="text-center px-3 py-2.5 rounded-lg border border-white/10 text-sm text-gray-400 transition-all peer-checked:border-brand peer-checked:text-brand peer-checked:bg-yellow-400/10 hover:border-white/20">
+                {o.label}
+              </div>
+            </label>
           ))}
-        </select>
-        {errors.monthly_bookings && <p className="text-red-400 text-xs mt-1">{errors.monthly_bookings.message}</p>}
+        </div>
+        <ErrMsg msg={errors.outcome?.message} />
+      </div>
+
+      <Divider label="Business Context" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <Label>Monthly Bookings</Label>
+          <select {...register('monthly_bookings')} className={inputCls(!!errors.monthly_bookings)}>
+            <option value="">Select…</option>
+            {MONTHLY_BOOKING_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <ErrMsg msg={errors.monthly_bookings?.message} />
+        </div>
+        <div>
+          <Label>Close Rate</Label>
+          <select {...register('close_rate')} className={inputCls(!!errors.close_rate)}>
+            <option value="">Select…</option>
+            {CLOSE_RATE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <ErrMsg msg={errors.close_rate?.message} />
+        </div>
+        <div>
+          <Label>Monthly Revenue</Label>
+          <select {...register('monthly_revenue')} className={inputCls(!!errors.monthly_revenue)}>
+            <option value="">Select…</option>
+            {REVENUE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <ErrMsg msg={errors.monthly_revenue?.message} />
+        </div>
       </div>
 
       <div>
-        <FieldLabel required>Business-Wide Close Rate</FieldLabel>
-        <select {...register('close_rate')} className={inputClass(!!errors.close_rate)}>
-          <option value="">Select close rate…</option>
-          {CLOSE_RATE_OPTIONS.map(o => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-        {errors.close_rate && <p className="text-red-400 text-xs mt-1">{errors.close_rate.message}</p>}
-      </div>
-
-      <div>
-        <FieldLabel required>Monthly Revenue</FieldLabel>
-        <select {...register('monthly_revenue')} className={inputClass(!!errors.monthly_revenue)}>
-          <option value="">Select revenue range…</option>
-          {REVENUE_OPTIONS.map(o => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-        {errors.monthly_revenue && <p className="text-red-400 text-xs mt-1">{errors.monthly_revenue.message}</p>}
-      </div>
-
-      <div>
-        <FieldLabel>Notes</FieldLabel>
+        <Label>Notes <span className="normal-case text-gray-600 tracking-normal font-normal">(optional)</span></Label>
         <textarea
           {...register('notes')}
-          rows={4}
-          placeholder="Key objections, next steps, anything worth remembering…"
-          className={`${inputClass()} resize-none`}
+          rows={3}
+          placeholder="Objections, next steps, anything worth remembering…"
+          className={`${inputCls()} resize-none`}
         />
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-brand text-black font-semibold py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        className="w-full bg-brand text-black font-bold py-3.5 rounded-xl hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm tracking-wide uppercase"
       >
-        {isSubmitting ? 'Saving…' : 'Log Call'}
+        {isSubmitting ? 'Saving…' : 'Submit Call'}
       </button>
+
     </form>
   )
 }
