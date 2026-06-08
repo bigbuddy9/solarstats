@@ -12,7 +12,7 @@ function computeStats(calls: Call[]) {
   const total = calls.length
   const showed = calls.filter(c => c.outcome !== 'no-show').length
   const closed = calls.filter(c => c.outcome === 'closed').length
-  const pipeline = calls.filter(c => c.outcome === 'follow-up-booked').length
+  const pipeline = calls.filter(c => c.outcome === 'follow-up').length
 
   const showRate = total > 0 ? Math.round((showed / total) * 100) : 0
   const closeRate = showed > 0 ? Math.round((closed / showed) * 100) : 0

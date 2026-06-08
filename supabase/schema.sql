@@ -10,8 +10,9 @@ create table calls (
   homeowner_name text not null,
   address text not null,
   phone text default '',
+  email text default '',
   appointment_date timestamptz not null,
-  outcome text not null check (outcome in ('no-show','disqualified','no-sale','follow-up-booked','closed')),
+  outcome text not null check (outcome in ('no-show','disqualified','no-sale','follow-up','closed')),
   disqualified_reason text default '',
   system_size text default '',
   deal_value text default ''

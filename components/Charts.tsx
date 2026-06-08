@@ -28,7 +28,7 @@ const OUTCOME_COLORS: Record<CallOutcome, string> = {
   'no-show':          '#6b7280',
   'disqualified':     '#ef4444',
   'no-sale':          '#f97316',
-  'follow-up-booked': '#eab308',
+  'follow-up': '#eab308',
   'closed':           '#22c55e',
 }
 
@@ -36,7 +36,7 @@ const OUTCOME_LABELS: Record<CallOutcome, string> = {
   'no-show':          'No Show',
   'disqualified':     'Disqualified',
   'no-sale':          'No Sale',
-  'follow-up-booked': 'Follow Up',
+  'follow-up': 'Follow Up',
   'closed':           'Closed',
 }
 

@@ -11,7 +11,7 @@ const OUTCOME_BADGES: Record<CallOutcome, string> = {
   'no-show':          'bg-gray-800 text-gray-400 border-gray-700',
   'disqualified':     'bg-red-900/40 text-red-400 border-red-800',
   'no-sale':          'bg-orange-900/40 text-orange-400 border-orange-800',
-  'follow-up-booked': 'bg-yellow-900/40 text-yellow-400 border-yellow-800',
+  'follow-up': 'bg-yellow-900/40 text-yellow-400 border-yellow-800',
   'closed':           'bg-green-900/40 text-green-400 border-green-800',
 }
 
@@ -19,11 +19,11 @@ const OUTCOME_LABELS: Record<CallOutcome, string> = {
   'no-show':          'No Show',
   'disqualified':     'Disqualified',
   'no-sale':          'No Sale',
-  'follow-up-booked': 'Follow Up',
+  'follow-up': 'Follow Up',
   'closed':           'Closed',
 }
 
-const ALL_OUTCOMES: CallOutcome[] = ['no-show', 'disqualified', 'no-sale', 'follow-up-booked', 'closed']
+const ALL_OUTCOMES: CallOutcome[] = ['no-show', 'disqualified', 'no-sale', 'follow-up', 'closed']
 
 type SortKey = 'appointment_date' | 'rep_name' | 'outcome'
 type SortDir = 'asc' | 'desc'

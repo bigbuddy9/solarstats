@@ -11,8 +11,9 @@ const schema = z.object({
   homeowner_name: z.string().min(1, 'Required'),
   address: z.string().min(1, 'Required'),
   phone: z.string().optional(),
+  email: z.string().optional(),
   appointment_date: z.string().min(1, 'Required'),
-  outcome: z.enum(['no-show', 'disqualified', 'no-sale', 'follow-up-booked', 'closed']),
+  outcome: z.enum(['no-show', 'disqualified', 'no-sale', 'follow-up', 'closed']),
   disqualified_reason: z.string().optional(),
   system_size: z.string().optional(),
   deal_value: z.string().optional(),
@@ -24,7 +25,7 @@ const OUTCOMES = [
   { value: 'no-show',          label: 'No Show' },
   { value: 'disqualified',     label: 'Disqualified' },
   { value: 'no-sale',          label: 'No Sale' },
-  { value: 'follow-up-booked', label: 'Follow Up Booked' },
+  { value: 'follow-up', label: 'Follow Up' },
   { value: 'closed',           label: 'Closed' },
 ]
 
@@ -81,6 +82,7 @@ export default function CallForm() {
       homeowner_name: data.homeowner_name,
       address: data.address,
       phone: data.phone ?? '',
+      email: data.email ?? '',
       appointment_date: data.appointment_date,
       outcome: data.outcome,
       disqualified_reason: data.disqualified_reason ?? '',
@@ -124,15 +126,20 @@ export default function CallForm() {
       </div>
 
       {/* Homeowner */}
+      <div>
+        <Label>Homeowner Name</Label>
+        <input {...register('homeowner_name')} placeholder="Jane Doe" className={inputCls(!!errors.homeowner_name)} />
+        <ErrMsg msg={errors.homeowner_name?.message} />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Homeowner Name</Label>
-          <input {...register('homeowner_name')} placeholder="Jane Doe" className={inputCls(!!errors.homeowner_name)} />
-          <ErrMsg msg={errors.homeowner_name?.message} />
-        </div>
         <div>
           <Label>Phone <span className="normal-case text-gray-600 tracking-normal font-normal">(optional)</span></Label>
           <input {...register('phone')} placeholder="(555) 000-0000" className={inputCls()} />
+        </div>
+        <div>
+          <Label>Email <span className="normal-case text-gray-600 tracking-normal font-normal">(optional)</span></Label>
+          <input {...register('email')} type="email" placeholder="jane@example.com" className={inputCls()} />
         </div>
       </div>
 

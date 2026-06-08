@@ -20,7 +20,7 @@ export default async function LogCallPage() {
             {s?.business_name ?? 'Scale Solar'}
           </span>
         </div>
-        <a href="/login" className="text-xs text-gray-600 hover:text-yellow-400 transition-colors">
+        <a href="/login" className="text-xs font-semibold bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-all border border-white/10">
           Dashboard →
         </a>
       </div>
