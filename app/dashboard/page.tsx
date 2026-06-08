@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   if (!session) redirect('/login')
 
   const [{ data: calls }, { data: settings }] = await Promise.all([
-    supabase.from('calls').select('*').order('call_date', { ascending: false }),
+    supabase.from('calls').select('*').order('appointment_date', { ascending: false }),
     supabase.from('settings').select('*').single(),
   ])
 

@@ -1,43 +1,43 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
-  caller_name: z.string().min(1, 'Required'),
-  caller_phone: z.string().min(1, 'Required'),
-  call_date: z.string().min(1, 'Required'),
-  outcome: z.enum(['qualified', 'disqualified', 'no-show', 'cancelled', 'booked', 'closed']),
-  monthly_bookings: z.string().min(1, 'Required'),
-  close_rate: z.string().min(1, 'Required'),
-  monthly_revenue: z.string().min(1, 'Required'),
-  notes: z.string().optional(),
+  rep_name: z.string().min(1, 'Required'),
+  homeowner_name: z.string().min(1, 'Required'),
+  address: z.string().min(1, 'Required'),
+  phone: z.string().optional(),
+  appointment_date: z.string().min(1, 'Required'),
+  outcome: z.enum(['no-show', 'disqualified', 'no-sale', 'follow-up-booked', 'closed']),
+  disqualified_reason: z.string().optional(),
+  system_size: z.string().optional(),
+  deal_value: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
 
-const MONTHLY_BOOKING_OPTIONS = [
-  '0 - 5 calls/month',
-  '5 - 10 calls/month',
-  '10 - 20 calls/month',
-  '20 - 40 calls/month',
-  '40+ calls/month',
+const OUTCOMES = [
+  { value: 'no-show',          label: 'No Show' },
+  { value: 'disqualified',     label: 'Disqualified' },
+  { value: 'no-sale',          label: 'No Sale' },
+  { value: 'follow-up-booked', label: 'Follow Up Booked' },
+  { value: 'closed',           label: 'Closed' },
 ]
 
-const CLOSE_RATE_OPTIONS = ['Under 10%', '10% - 20%', '20% - 30%', '30% - 40%', '40%+']
+const DISQ_REASONS = [
+  { value: 'bill-too-low',     label: 'Bill Too Low' },
+  { value: 'roof-issue',       label: 'Roof Issue' },
+  { value: 'credit-financing', label: 'Credit / Financing' },
+]
 
-const REVENUE_OPTIONS = ['$0 - $5k', '$5k - $10k', '$10k - $25k', '$25k - $50k', '$50k - $100k', '$100k+']
+const SYSTEM_SIZES = ['Under 5 kW', '5–8 kW', '8–12 kW', '12–16 kW', '16+ kW']
 
-const OUTCOMES = [
-  { value: 'qualified', label: 'Qualified' },
-  { value: 'disqualified', label: 'Disqualified' },
-  { value: 'no-show', label: 'No-show' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'booked', label: 'Booked' },
-  { value: 'closed', label: 'Closed' },
+const DEAL_VALUES = [
+  'Under $20k', '$20k–$30k', '$30k–$40k', '$40k–$50k', '$50k–$60k', '$60k+'
 ]
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -49,22 +49,12 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 function inputCls(err?: boolean) {
-  return `w-full bg-white/5 border ${err ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-white placeholder-gray-600 text-sm transition-colors hover:border-white/20 focus:border-brand focus:bg-white/8`
+  return `w-full bg-white/5 border ${err ? 'border-red-500' : 'border-white/10'} rounded-lg px-4 py-3 text-white placeholder-gray-600 text-sm transition-colors hover:border-white/20 focus:border-brand`
 }
 
 function ErrMsg({ msg }: { msg?: string }) {
   if (!msg) return null
   return <p className="text-red-400 text-xs mt-1.5">{msg}</p>
-}
-
-function Divider({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <div className="flex-1 h-px bg-white/5" />
-      <span className="text-xs text-gray-600 uppercase tracking-widest">{label}</span>
-      <div className="flex-1 h-px bg-white/5" />
-    </div>
-  )
 }
 
 export default function CallForm() {
@@ -75,18 +65,31 @@ export default function CallForm() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { call_date: new Date().toISOString().slice(0, 16) },
+    defaultValues: { appointment_date: new Date().toISOString().slice(0, 16) },
   })
+
+  const outcome = useWatch({ control, name: 'outcome' })
 
   async function onSubmit(data: FormData) {
     setServerError('')
-    const { error } = await supabase.from('calls').insert([{ ...data, notes: data.notes ?? '' }])
+    const { error } = await supabase.from('calls').insert([{
+      rep_name: data.rep_name,
+      homeowner_name: data.homeowner_name,
+      address: data.address,
+      phone: data.phone ?? '',
+      appointment_date: data.appointment_date,
+      outcome: data.outcome,
+      disqualified_reason: data.disqualified_reason ?? '',
+      system_size: data.system_size ?? '',
+      deal_value: data.deal_value ?? '',
+    }])
     if (error) { setServerError(error.message); return }
     setSuccess(true)
-    reset({ call_date: new Date().toISOString().slice(0, 16) })
+    reset({ appointment_date: new Date().toISOString().slice(0, 16) })
     setTimeout(() => setSuccess(false), 4000)
   }
 
@@ -96,7 +99,7 @@ export default function CallForm() {
       {success && (
         <div className="flex items-center gap-3 bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-5 py-4">
           <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" />
-          <p className="text-yellow-300 text-sm font-medium">Call logged. Good work — on to the next one.</p>
+          <p className="text-yellow-300 text-sm font-medium">Logged. On to the next one.</p>
         </div>
       )}
 
@@ -106,36 +109,47 @@ export default function CallForm() {
         </div>
       )}
 
-      {/* Who + When */}
+      {/* Rep + Date */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label>Caller Name</Label>
-          <input {...register('caller_name')} placeholder="John Smith" className={inputCls(!!errors.caller_name)} />
-          <ErrMsg msg={errors.caller_name?.message} />
+          <Label>Your Name</Label>
+          <input {...register('rep_name')} placeholder="Rep name" className={inputCls(!!errors.rep_name)} />
+          <ErrMsg msg={errors.rep_name?.message} />
         </div>
         <div>
-          <Label>Phone Number</Label>
-          <input {...register('caller_phone')} placeholder="(555) 000-0000" className={inputCls(!!errors.caller_phone)} />
-          <ErrMsg msg={errors.caller_phone?.message} />
+          <Label>Appointment Date &amp; Time</Label>
+          <input type="datetime-local" {...register('appointment_date')} className={inputCls(!!errors.appointment_date)} />
+          <ErrMsg msg={errors.appointment_date?.message} />
+        </div>
+      </div>
+
+      {/* Homeowner */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label>Homeowner Name</Label>
+          <input {...register('homeowner_name')} placeholder="Jane Doe" className={inputCls(!!errors.homeowner_name)} />
+          <ErrMsg msg={errors.homeowner_name?.message} />
+        </div>
+        <div>
+          <Label>Phone <span className="normal-case text-gray-600 tracking-normal font-normal">(optional)</span></Label>
+          <input {...register('phone')} placeholder="(555) 000-0000" className={inputCls()} />
         </div>
       </div>
 
       <div>
-        <Label>Call Date &amp; Time</Label>
-        <input type="datetime-local" {...register('call_date')} className={inputCls(!!errors.call_date)} />
-        <ErrMsg msg={errors.call_date?.message} />
+        <Label>Address</Label>
+        <input {...register('address')} placeholder="123 Main St, City, State" className={inputCls(!!errors.address)} />
+        <ErrMsg msg={errors.address?.message} />
       </div>
 
-      <Divider label="Call Result" />
-
-      {/* Outcome — pill selector */}
+      {/* Outcome */}
       <div>
         <Label>Outcome</Label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {OUTCOMES.map(o => (
             <label key={o.value} className="cursor-pointer">
               <input type="radio" value={o.value} {...register('outcome')} className="sr-only peer" />
-              <div className="text-center px-3 py-2.5 rounded-lg border border-white/10 text-sm text-gray-400 transition-all peer-checked:border-brand peer-checked:text-brand peer-checked:bg-yellow-400/10 hover:border-white/20">
+              <div className={`text-center px-2 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-brand peer-checked:text-black peer-checked:bg-brand hover:border-white/20 leading-tight`}>
                 {o.label}
               </div>
             </label>
@@ -144,51 +158,49 @@ export default function CallForm() {
         <ErrMsg msg={errors.outcome?.message} />
       </div>
 
-      <Divider label="Business Context" />
+      {/* Conditional: Disqualified reason */}
+      {outcome === 'disqualified' && (
+        <div>
+          <Label>Disqualified Reason</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {DISQ_REASONS.map(r => (
+              <label key={r.value} className="cursor-pointer">
+                <input type="radio" value={r.value} {...register('disqualified_reason')} className="sr-only peer" />
+                <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-red-500 peer-checked:text-red-400 peer-checked:bg-red-500/10 hover:border-white/20">
+                  {r.label}
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <Label>Monthly Bookings</Label>
-          <select {...register('monthly_bookings')} className={inputCls(!!errors.monthly_bookings)}>
-            <option value="">Select…</option>
-            {MONTHLY_BOOKING_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-          <ErrMsg msg={errors.monthly_bookings?.message} />
+      {/* Conditional: Closed deal details */}
+      {outcome === 'closed' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-yellow-400/5 border border-yellow-400/20">
+          <div>
+            <Label>System Size</Label>
+            <select {...register('system_size')} className={inputCls()}>
+              <option value="">Select…</option>
+              {SYSTEM_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>Deal Value</Label>
+            <select {...register('deal_value')} className={inputCls()}>
+              <option value="">Select…</option>
+              {DEAL_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
         </div>
-        <div>
-          <Label>Close Rate</Label>
-          <select {...register('close_rate')} className={inputCls(!!errors.close_rate)}>
-            <option value="">Select…</option>
-            {CLOSE_RATE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-          <ErrMsg msg={errors.close_rate?.message} />
-        </div>
-        <div>
-          <Label>Monthly Revenue</Label>
-          <select {...register('monthly_revenue')} className={inputCls(!!errors.monthly_revenue)}>
-            <option value="">Select…</option>
-            {REVENUE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-          <ErrMsg msg={errors.monthly_revenue?.message} />
-        </div>
-      </div>
-
-      <div>
-        <Label>Notes <span className="normal-case text-gray-600 tracking-normal font-normal">(optional)</span></Label>
-        <textarea
-          {...register('notes')}
-          rows={3}
-          placeholder="Objections, next steps, anything worth remembering…"
-          className={`${inputCls()} resize-none`}
-        />
-      </div>
+      )}
 
       <button
         type="submit"
         disabled={isSubmitting}
         className="w-full bg-brand text-black font-bold py-3.5 rounded-xl hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm tracking-wide uppercase"
       >
-        {isSubmitting ? 'Saving…' : 'Submit Call'}
+        {isSubmitting ? 'Saving…' : 'Submit'}
       </button>
 
     </form>
