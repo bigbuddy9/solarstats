@@ -18,6 +18,7 @@ const schema = z.object({
   disqualified_reason: z.string().optional(),
   no_sale_reason: z.string().optional(),
   follow_up_reason: z.string().optional(),
+  follow_up_intent: z.string().optional(),
   system_size: z.string().optional(),
   deal_value: z.string().optional(),
 })
@@ -39,11 +40,18 @@ const DISQ_REASONS = [
 ]
 
 const NO_SALE_REASONS = [
-  { value: 'price-too-expensive', label: 'Price / Too Expensive' },
-  { value: 'think-about-it',      label: 'Think About It' },
-  { value: 'compare-quotes',      label: 'Compare Quotes / Look Around' },
-  { value: 'spouse-partner',      label: 'Spouse / Partner Objection' },
-  { value: 'timing',              label: 'Timing Objection' },
+  { value: 'price',         label: 'Price',          tip: 'Too expensive, can\'t afford it, doesn\'t see the value' },
+  { value: 'think-about-it', label: 'Think About It', tip: 'Classic stall — won\'t commit on the spot' },
+  { value: 'shop-around',   label: 'Shop Around',    tip: 'Wants to compare quotes or see other options' },
+  { value: 'authority',     label: 'Authority',      tip: 'Needs spouse, partner, or someone else to decide' },
+  { value: 'timing',        label: 'Timing',         tip: 'Not ready, wants to wait, bad personal timing' },
+  { value: 'not-interested', label: 'Not Interested', tip: 'Flat no — done with the conversation' },
+]
+
+const INTENT_LEVELS = [
+  { value: 'cold', label: 'Cold', tip: 'Unlikely to close — probably not happening' },
+  { value: 'warm', label: 'Warm', tip: 'Not sure — seemed good but could go either way' },
+  { value: 'hot',  label: 'Hot',  tip: 'This should close — just needs the right push' },
 ]
 
 const SYSTEM_SIZES = ['Under 5 kW', '5–8 kW', '8–12 kW', '12–16 kW', '16+ kW']
@@ -100,6 +108,7 @@ export default function CallForm() {
       disqualified_reason: data.disqualified_reason ?? '',
       no_sale_reason: data.no_sale_reason ?? '',
       follow_up_reason: data.follow_up_reason ?? '',
+      follow_up_intent: data.follow_up_intent ?? '',
       system_size: data.system_size ?? '',
       deal_value: data.deal_value ?? '',
     }])
@@ -211,7 +220,7 @@ export default function CallForm() {
           <Label>Main Objection</Label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {NO_SALE_REASONS.map(r => (
-              <label key={r.value} className="cursor-pointer">
+              <label key={r.value} className="cursor-pointer" title={r.tip}>
                 <input type="radio" value={r.value} {...register('no_sale_reason')} className="sr-only peer" />
                 <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-orange-500 peer-checked:text-orange-400 peer-checked:bg-orange-500/10 hover:border-white/20 leading-tight">
                   {r.label}
@@ -222,19 +231,38 @@ export default function CallForm() {
         </div>
       )}
 
-      {/* Conditional: Follow Up reason */}
+      {/* Conditional: Follow Up reason + intent */}
       {outcome === 'follow-up' && (
-        <div>
-          <Label>Main Objection</Label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {NO_SALE_REASONS.map(r => (
-              <label key={r.value} className="cursor-pointer">
-                <input type="radio" value={r.value} {...register('follow_up_reason')} className="sr-only peer" />
-                <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-yellow-500 peer-checked:text-yellow-400 peer-checked:bg-yellow-500/10 hover:border-white/20 leading-tight">
-                  {r.label}
-                </div>
-              </label>
-            ))}
+        <div className="space-y-4">
+          <div>
+            <Label>Main Objection</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {NO_SALE_REASONS.map(r => (
+                <label key={r.value} className="cursor-pointer" title={r.tip}>
+                  <input type="radio" value={r.value} {...register('follow_up_reason')} className="sr-only peer" />
+                  <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-yellow-500 peer-checked:text-yellow-400 peer-checked:bg-yellow-500/10 hover:border-white/20 leading-tight">
+                    {r.label}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <Label>Intent</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {INTENT_LEVELS.map(i => (
+                <label key={i.value} className="cursor-pointer" title={i.tip}>
+                  <input type="radio" value={i.value} {...register('follow_up_intent')} className="sr-only peer" />
+                  <div className={`text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all hover:border-white/20 leading-tight
+                    ${i.value === 'cold' ? 'peer-checked:border-blue-500 peer-checked:text-blue-400 peer-checked:bg-blue-500/10' : ''}
+                    ${i.value === 'warm' ? 'peer-checked:border-orange-400 peer-checked:text-orange-300 peer-checked:bg-orange-500/10' : ''}
+                    ${i.value === 'hot'  ? 'peer-checked:border-red-500 peer-checked:text-red-400 peer-checked:bg-red-500/10' : ''}
+                  `}>
+                    {i.label}
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -17,6 +17,7 @@ create table calls (
   disqualified_reason text default '',
   no_sale_reason text default '',
   follow_up_reason text default '',
+  follow_up_intent text default '',
   system_size text default '',
   deal_value text default ''
 );

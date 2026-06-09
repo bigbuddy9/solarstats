@@ -22,6 +22,7 @@ export interface Call {
   disqualified_reason: DisqualifiedReason
   no_sale_reason: string
   follow_up_reason: string
+  follow_up_intent: string
   system_size: string
   deal_value: string
 }
