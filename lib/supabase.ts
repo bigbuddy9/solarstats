@@ -33,4 +33,5 @@ export interface Settings {
   logo_url: string
   brand_color: string
   subdomain: string
+  team_pin: string
 }

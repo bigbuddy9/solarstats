@@ -28,7 +28,8 @@ create table settings (
   business_name text not null default 'Scale Solar',
   logo_url text default '',
   brand_color text default '#eab308',
-  subdomain text default ''
+  subdomain text default '',
+  team_pin text default ''
 );
 
 -- RLS
