@@ -110,7 +110,7 @@ export default function CallsTable({ calls }: CallsTableProps) {
                     {new Date(call.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
                   <td className="px-4 py-3 text-white font-medium whitespace-nowrap">{call.rep_name}</td>
-                  <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{call.homeowner_name}</td>
+                  <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{call.homeowner_first_name} {call.homeowner_last_name}</td>
                   <td className="px-4 py-3 text-gray-400 max-w-[180px] truncate">{call.address}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${OUTCOME_BADGES[call.outcome]}`}>

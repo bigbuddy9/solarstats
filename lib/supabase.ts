@@ -12,7 +12,8 @@ export interface Call {
   id: string
   created_at: string
   rep_name: string
-  homeowner_name: string
+  homeowner_first_name: string
+  homeowner_last_name: string
   address: string
   phone: string
   email: string

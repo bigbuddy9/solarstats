@@ -8,10 +8,11 @@ import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
   rep_name: z.string().min(1, 'Required'),
-  homeowner_name: z.string().min(1, 'Required'),
+  homeowner_first_name: z.string().min(1, 'Required'),
+  homeowner_last_name: z.string().min(1, 'Required'),
   address: z.string().min(1, 'Required'),
-  phone: z.string().optional(),
-  email: z.string().optional(),
+  phone: z.string().min(1, 'Required'),
+  email: z.string().email('Invalid email').min(1, 'Required'),
   appointment_date: z.string().min(1, 'Required'),
   outcome: z.enum(['no-show', 'disqualified', 'no-sale', 'follow-up', 'closed']),
   disqualified_reason: z.string().optional(),
@@ -79,10 +80,11 @@ export default function CallForm() {
     setServerError('')
     const { error } = await supabase.from('calls').insert([{
       rep_name: data.rep_name,
-      homeowner_name: data.homeowner_name,
+      homeowner_first_name: data.homeowner_first_name,
+      homeowner_last_name: data.homeowner_last_name,
       address: data.address,
-      phone: data.phone ?? '',
-      email: data.email ?? '',
+      phone: data.phone,
+      email: data.email,
       appointment_date: data.appointment_date,
       outcome: data.outcome,
       disqualified_reason: data.disqualified_reason ?? '',
@@ -126,20 +128,29 @@ export default function CallForm() {
       </div>
 
       {/* Homeowner */}
-      <div>
-        <Label>Homeowner Name</Label>
-        <input {...register('homeowner_name')} placeholder="Jane Doe" className={inputCls(!!errors.homeowner_name)} />
-        <ErrMsg msg={errors.homeowner_name?.message} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label>Homeowner First Name</Label>
+          <input {...register('homeowner_first_name')} placeholder="Jane" className={inputCls(!!errors.homeowner_first_name)} />
+          <ErrMsg msg={errors.homeowner_first_name?.message} />
+        </div>
+        <div>
+          <Label>Homeowner Last Name</Label>
+          <input {...register('homeowner_last_name')} placeholder="Doe" className={inputCls(!!errors.homeowner_last_name)} />
+          <ErrMsg msg={errors.homeowner_last_name?.message} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label>Phone <span className="normal-case text-gray-600 tracking-normal font-normal">(optional)</span></Label>
-          <input {...register('phone')} placeholder="(555) 000-0000" className={inputCls()} />
+          <Label>Phone</Label>
+          <input {...register('phone')} placeholder="(555) 000-0000" className={inputCls(!!errors.phone)} />
+          <ErrMsg msg={errors.phone?.message} />
         </div>
         <div>
-          <Label>Email <span className="normal-case text-gray-600 tracking-normal font-normal">(optional)</span></Label>
-          <input {...register('email')} type="email" placeholder="jane@example.com" className={inputCls()} />
+          <Label>Email</Label>
+          <input {...register('email')} type="email" placeholder="jane@example.com" className={inputCls(!!errors.email)} />
+          <ErrMsg msg={errors.email?.message} />
         </div>
       </div>
 
