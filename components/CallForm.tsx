@@ -16,6 +16,8 @@ const schema = z.object({
   appointment_date: z.string().min(1, 'Required'),
   outcome: z.enum(['no-show', 'disqualified', 'no-sale', 'follow-up', 'closed']),
   disqualified_reason: z.string().optional(),
+  no_sale_reason: z.string().optional(),
+  follow_up_reason: z.string().optional(),
   system_size: z.string().optional(),
   deal_value: z.string().optional(),
 })
@@ -34,6 +36,14 @@ const DISQ_REASONS = [
   { value: 'bill-too-low',     label: 'Bill Too Low' },
   { value: 'roof-issue',       label: 'Roof Issue' },
   { value: 'credit-financing', label: 'Credit / Financing' },
+]
+
+const NO_SALE_REASONS = [
+  { value: 'price-too-expensive', label: 'Price / Too Expensive' },
+  { value: 'think-about-it',      label: 'Think About It' },
+  { value: 'compare-quotes',      label: 'Compare Quotes / Look Around' },
+  { value: 'spouse-partner',      label: 'Spouse / Partner Objection' },
+  { value: 'timing',              label: 'Timing Objection' },
 ]
 
 const SYSTEM_SIZES = ['Under 5 kW', '5–8 kW', '8–12 kW', '12–16 kW', '16+ kW']
@@ -88,6 +98,8 @@ export default function CallForm() {
       appointment_date: data.appointment_date,
       outcome: data.outcome,
       disqualified_reason: data.disqualified_reason ?? '',
+      no_sale_reason: data.no_sale_reason ?? '',
+      follow_up_reason: data.follow_up_reason ?? '',
       system_size: data.system_size ?? '',
       deal_value: data.deal_value ?? '',
     }])
@@ -185,6 +197,40 @@ export default function CallForm() {
               <label key={r.value} className="cursor-pointer">
                 <input type="radio" value={r.value} {...register('disqualified_reason')} className="sr-only peer" />
                 <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-red-500 peer-checked:text-red-400 peer-checked:bg-red-500/10 hover:border-white/20">
+                  {r.label}
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Conditional: No Sale reason */}
+      {outcome === 'no-sale' && (
+        <div>
+          <Label>Main Objection</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {NO_SALE_REASONS.map(r => (
+              <label key={r.value} className="cursor-pointer">
+                <input type="radio" value={r.value} {...register('no_sale_reason')} className="sr-only peer" />
+                <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-orange-500 peer-checked:text-orange-400 peer-checked:bg-orange-500/10 hover:border-white/20 leading-tight">
+                  {r.label}
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Conditional: Follow Up reason */}
+      {outcome === 'follow-up' && (
+        <div>
+          <Label>Main Objection</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {NO_SALE_REASONS.map(r => (
+              <label key={r.value} className="cursor-pointer">
+                <input type="radio" value={r.value} {...register('follow_up_reason')} className="sr-only peer" />
+                <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-yellow-500 peer-checked:text-yellow-400 peer-checked:bg-yellow-500/10 hover:border-white/20 leading-tight">
                   {r.label}
                 </div>
               </label>

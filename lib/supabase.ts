@@ -20,6 +20,8 @@ export interface Call {
   appointment_date: string
   outcome: CallOutcome
   disqualified_reason: DisqualifiedReason
+  no_sale_reason: string
+  follow_up_reason: string
   system_size: string
   deal_value: string
 }

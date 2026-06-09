@@ -15,6 +15,8 @@ create table calls (
   appointment_date timestamptz not null,
   outcome text not null check (outcome in ('no-show','disqualified','no-sale','follow-up','closed')),
   disqualified_reason text default '',
+  no_sale_reason text default '',
+  follow_up_reason text default '',
   system_size text default '',
   deal_value text default ''
 );
