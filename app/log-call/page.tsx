@@ -1,6 +1,6 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import CallForm from '@/components/CallForm'
+import PinGate from '@/components/PinGate'
 import type { Settings } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,6 @@ export default async function LogCallPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Top bar */}
       <div className="border-b border-white/5 px-6 py-4 flex items-center justify-between max-w-2xl mx-auto">
         <div className="flex items-center gap-2.5">
           <div className="h-2 w-2 rounded-full bg-brand" />
@@ -25,13 +24,8 @@ export default async function LogCallPage() {
         </a>
       </div>
 
-      {/* Main */}
       <main className="max-w-2xl mx-auto px-6 py-12">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-white">Post-Call Log</h1>
-          <p className="text-gray-500 mt-2">Fill this out immediately after every appointment.</p>
-        </div>
-        <CallForm />
+        <PinGate businessName={s?.business_name ?? 'Scale Solar'} />
       </main>
     </div>
   )

@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
-  team_pin: z.string().min(4, 'Enter the 4-digit team PIN'),
   rep_name: z.string().min(1, 'Required'),
   homeowner_first_name: z.string().min(1, 'Required'),
   homeowner_last_name: z.string().min(1, 'Required'),
@@ -97,14 +96,6 @@ export default function CallForm() {
 
   async function onSubmit(data: FormData) {
     setServerError('')
-
-    // Validate PIN against settings
-    const { data: settings } = await supabase.from('settings').select('team_pin').single()
-    if (settings?.team_pin && data.team_pin !== settings.team_pin) {
-      setServerError('Incorrect team PIN.')
-      return
-    }
-
     const { error } = await supabase.from('calls').insert([{
       rep_name: data.rep_name,
       homeowner_first_name: data.homeowner_first_name,
@@ -142,19 +133,6 @@ export default function CallForm() {
           {serverError}
         </div>
       )}
-
-      {/* Team PIN */}
-      <div>
-        <Label>Team PIN</Label>
-        <input
-          {...register('team_pin')}
-          type="password"
-          maxLength={4}
-          placeholder="••••"
-          className={`${inputCls(!!errors.team_pin)} max-w-[140px] tracking-widest text-center text-lg`}
-        />
-        <ErrMsg msg={errors.team_pin?.message} />
-      </div>
 
       {/* Rep + Date */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
