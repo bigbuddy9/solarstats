@@ -6,11 +6,18 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export type CallOutcome = 'no-show' | 'disqualified' | 'no-sale' | 'follow-up' | 'closed'
-export type DisqualifiedReason = 'bill-too-low' | 'roof-issue' | 'credit-financing' | ''
+export type UserRole = 'rep' | 'owner'
+
+export interface Profile {
+  id: string
+  name: string
+  role: UserRole
+}
 
 export interface Call {
   id: string
   created_at: string
+  user_id: string
   rep_name: string
   homeowner_first_name: string
   homeowner_last_name: string
@@ -19,7 +26,7 @@ export interface Call {
   email: string
   appointment_date: string
   outcome: CallOutcome
-  disqualified_reason: DisqualifiedReason
+  disqualified_reason: string
   no_sale_reason: string
   follow_up_reason: string
   follow_up_intent: string
@@ -33,5 +40,4 @@ export interface Settings {
   logo_url: string
   brand_color: string
   subdomain: string
-  team_pin: string
 }

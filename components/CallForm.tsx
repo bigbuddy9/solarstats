@@ -7,12 +7,11 @@ import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
-  rep_name: z.string().min(1, 'Required'),
   homeowner_first_name: z.string().min(1, 'Required'),
   homeowner_last_name: z.string().min(1, 'Required'),
   address: z.string().min(1, 'Required'),
   phone: z.string().min(1, 'Required'),
-  email: z.string().email('Invalid email').min(1, 'Required'),
+  email: z.string().email('Invalid email'),
   appointment_date: z.string().min(1, 'Required'),
   outcome: z.enum(['no-show', 'disqualified', 'no-sale', 'follow-up', 'closed']),
   disqualified_reason: z.string().optional(),
@@ -26,11 +25,11 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 const OUTCOMES = [
-  { value: 'no-show',          label: 'No Show' },
-  { value: 'disqualified',     label: 'Disqualified' },
-  { value: 'no-sale',          label: 'No Sale' },
-  { value: 'follow-up', label: 'Follow Up' },
-  { value: 'closed',           label: 'Closed' },
+  { value: 'no-show',      label: 'No Show' },
+  { value: 'disqualified', label: 'Disqualified' },
+  { value: 'no-sale',      label: 'No Sale' },
+  { value: 'follow-up',    label: 'Follow Up' },
+  { value: 'closed',       label: 'Closed' },
 ]
 
 const DISQ_REASONS = [
@@ -40,11 +39,11 @@ const DISQ_REASONS = [
 ]
 
 const NO_SALE_REASONS = [
-  { value: 'price',         label: 'Price',          tip: 'Too expensive, can\'t afford it, doesn\'t see the value' },
-  { value: 'think-about-it', label: 'Think About It', tip: 'Classic stall — won\'t commit on the spot' },
-  { value: 'shop-around',   label: 'Shop Around',    tip: 'Wants to compare quotes or see other options' },
-  { value: 'authority',     label: 'Authority',      tip: 'Needs spouse, partner, or someone else to decide' },
-  { value: 'timing',        label: 'Timing',         tip: 'Not ready, wants to wait, bad personal timing' },
+  { value: 'price',          label: 'Price',          tip: "Too expensive, can't afford it, doesn't see the value" },
+  { value: 'think-about-it', label: 'Think About It', tip: "Classic stall — won't commit on the spot" },
+  { value: 'shop-around',    label: 'Shop Around',    tip: 'Wants to compare quotes or see other options' },
+  { value: 'authority',      label: 'Authority',      tip: 'Needs spouse, partner, or someone else to decide' },
+  { value: 'timing',         label: 'Timing',         tip: 'Not ready, wants to wait, bad personal timing' },
   { value: 'not-interested', label: 'Not Interested', tip: 'Flat no — done with the conversation' },
 ]
 
@@ -55,10 +54,7 @@ const INTENT_LEVELS = [
 ]
 
 const SYSTEM_SIZES = ['Under 5 kW', '5–8 kW', '8–12 kW', '12–16 kW', '16+ kW']
-
-const DEAL_VALUES = [
-  'Under $20k', '$20k–$30k', '$30k–$40k', '$40k–$50k', '$50k–$60k', '$60k+'
-]
+const DEAL_VALUES = ['Under $20k', '$20k–$30k', '$30k–$40k', '$40k–$50k', '$50k–$60k', '$60k+']
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -77,17 +73,16 @@ function ErrMsg({ msg }: { msg?: string }) {
   return <p className="text-red-400 text-xs mt-1.5">{msg}</p>
 }
 
-export default function CallForm() {
+interface CallFormProps {
+  userId: string
+  repName: string
+}
+
+export default function CallForm({ userId, repName }: CallFormProps) {
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState('')
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    control,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { appointment_date: new Date().toISOString().slice(0, 16) },
   })
@@ -97,7 +92,8 @@ export default function CallForm() {
   async function onSubmit(data: FormData) {
     setServerError('')
     const { error } = await supabase.from('calls').insert([{
-      rep_name: data.rep_name,
+      user_id: userId,
+      rep_name: repName,
       homeowner_first_name: data.homeowner_first_name,
       homeowner_last_name: data.homeowner_last_name,
       address: data.address,
@@ -127,19 +123,19 @@ export default function CallForm() {
           <p className="text-yellow-300 text-sm font-medium">Logged. On to the next one.</p>
         </div>
       )}
-
       {serverError && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-5 py-4 text-red-400 text-sm">
           {serverError}
         </div>
       )}
 
-      {/* Rep + Date */}
+      {/* Rep name display + date */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>Your Name</Label>
-          <input {...register('rep_name')} placeholder="Rep name" className={inputCls(!!errors.rep_name)} />
-          <ErrMsg msg={errors.rep_name?.message} />
+          <div className="w-full bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3 text-gray-400 text-sm">
+            {repName}
+          </div>
         </div>
         <div>
           <Label>Appointment Date &amp; Time</Label>
@@ -188,7 +184,7 @@ export default function CallForm() {
           {OUTCOMES.map(o => (
             <label key={o.value} className="cursor-pointer">
               <input type="radio" value={o.value} {...register('outcome')} className="sr-only peer" />
-              <div className={`text-center px-2 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-brand peer-checked:text-black peer-checked:bg-brand hover:border-white/20 leading-tight`}>
+              <div className="text-center px-2 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-brand peer-checked:text-black peer-checked:bg-brand hover:border-white/20 leading-tight">
                 {o.label}
               </div>
             </label>
@@ -197,7 +193,7 @@ export default function CallForm() {
         <ErrMsg msg={errors.outcome?.message} />
       </div>
 
-      {/* Conditional: Disqualified reason */}
+      {/* Disqualified reason */}
       {outcome === 'disqualified' && (
         <div>
           <Label>Disqualified Reason</Label>
@@ -214,7 +210,7 @@ export default function CallForm() {
         </div>
       )}
 
-      {/* Conditional: No Sale reason */}
+      {/* No Sale reason */}
       {outcome === 'no-sale' && (
         <div>
           <Label>Main Objection</Label>
@@ -231,7 +227,7 @@ export default function CallForm() {
         </div>
       )}
 
-      {/* Conditional: Follow Up reason + intent */}
+      {/* Follow Up reason + intent */}
       {outcome === 'follow-up' && (
         <div className="space-y-4">
           <div>
@@ -267,7 +263,7 @@ export default function CallForm() {
         </div>
       )}
 
-      {/* Conditional: Closed deal details */}
+      {/* Closed deal details */}
       {outcome === 'closed' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-yellow-400/5 border border-yellow-400/20">
           <div>
@@ -294,7 +290,6 @@ export default function CallForm() {
       >
         {isSubmitting ? 'Saving…' : 'Submit'}
       </button>
-
     </form>
   )
 }
