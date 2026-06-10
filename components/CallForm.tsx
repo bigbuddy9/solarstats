@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { supabase } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const schema = z.object({
   homeowner_name: z.string().min(1, 'Required'),
@@ -80,6 +80,7 @@ interface CallFormProps {
 }
 
 export default function CallForm({ userId, repName }: CallFormProps) {
+  const supabase = createClientComponentClient()
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState('')
 
