@@ -60,7 +60,7 @@ export default function CallsTable({ calls }: CallsTableProps) {
   }
 
   return (
-    <div className="bg-gray-950 border border-white/5 rounded-xl overflow-hidden">
+    <div className="bg-black border border-white/5 rounded-xl overflow-hidden">
       <div className="p-5 border-b border-white/5">
         <h3 className="text-sm font-semibold text-gray-300 mb-3">All Appointments</h3>
         <div className="flex flex-wrap gap-3">

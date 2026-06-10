@@ -59,7 +59,7 @@ export default function TeamManager({ profiles }: { profiles: Profile[] }) {
   return (
     <div className="space-y-4">
       {/* Member list */}
-      <div className="bg-gray-950 border border-white/5 rounded-xl overflow-hidden">
+      <div className="bg-black border border-white/5 rounded-xl overflow-hidden">
         {profiles.length === 0 ? (
           <p className="p-6 text-gray-600 text-sm text-center">No team members yet.</p>
         ) : (
@@ -94,7 +94,7 @@ export default function TeamManager({ profiles }: { profiles: Profile[] }) {
           + Add Team Member
         </button>
       ) : (
-        <form onSubmit={handleAdd} className="bg-gray-950 border border-white/5 rounded-xl p-6 space-y-4">
+        <form onSubmit={handleAdd} className="bg-black border border-white/5 rounded-xl p-6 space-y-4">
           <h3 className="text-white font-semibold">New Team Member</h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

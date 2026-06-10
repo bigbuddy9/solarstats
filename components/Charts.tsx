@@ -68,7 +68,7 @@ export default function Charts({ calls }: ChartsProps) {
 
   if (calls.length === 0) {
     return (
-      <div className="bg-gray-950 border border-white/5 rounded-xl p-8 text-center text-gray-600">
+      <div className="bg-black border border-white/5 rounded-xl p-8 text-center text-gray-600">
         No appointments logged yet.
       </div>
     )
@@ -77,7 +77,7 @@ export default function Charts({ calls }: ChartsProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Weekly bar chart */}
-      <div className="bg-gray-950 border border-white/5 rounded-xl p-5 lg:col-span-1">
+      <div className="bg-black border border-white/5 rounded-xl p-5 lg:col-span-1">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Appointments / Week</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={weeklyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -90,7 +90,7 @@ export default function Charts({ calls }: ChartsProps) {
       </div>
 
       {/* Outcome pie */}
-      <div className="bg-gray-950 border border-white/5 rounded-xl p-5">
+      <div className="bg-black border border-white/5 rounded-xl p-5">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Outcome Breakdown</h3>
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
@@ -108,7 +108,7 @@ export default function Charts({ calls }: ChartsProps) {
       </div>
 
       {/* Disqualification breakdown */}
-      <div className="bg-gray-950 border border-white/5 rounded-xl p-5">
+      <div className="bg-black border border-white/5 rounded-xl p-5">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Disqualification Reasons</h3>
         {disqChartData.length === 0 ? (
           <div className="h-[200px] flex items-center justify-center text-gray-600 text-sm">No disqualifications yet</div>

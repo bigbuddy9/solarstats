@@ -7,10 +7,11 @@ import Charts from '@/components/Charts'
 import CallsTable from '@/components/CallsTable'
 import type { Call, Settings, Profile } from '@/lib/supabase'
 
-type Period = 'week' | 'month' | 'year' | 'all'
+type Period = 'today' | 'week' | 'month' | 'year' | 'all'
 
 function startOf(period: Period): Date | null {
   const now = new Date()
+  if (period === 'today') { const d = new Date(now); d.setHours(0, 0, 0, 0); return d }
   if (period === 'week') { const d = new Date(now); d.setDate(now.getDate() - 7); return d }
   if (period === 'month') { const d = new Date(now); d.setMonth(now.getMonth() - 1); return d }
   if (period === 'year') { const d = new Date(now); d.setFullYear(now.getFullYear() - 1); return d }
@@ -92,6 +93,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
   const reps = allProfiles.filter(p => p.role === 'rep')
 
   const PERIODS: { value: Period; label: string }[] = [
+    { value: 'today', label: 'Today' },
     { value: 'week', label: 'This Week' },
     { value: 'month', label: 'This Month' },
     { value: 'year', label: 'This Year' },
@@ -179,7 +181,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
 
       {/* Owner: rep leaderboard */}
       {isOwner && selectedRep === 'all' && reps.length > 1 && (
-        <div className="bg-gray-950 border border-white/5 rounded-xl p-5 mb-8">
+        <div className="bg-black border border-white/5 rounded-xl p-5 mb-8">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Rep Leaderboard</h3>
           <div className="space-y-2">
             {reps.map(rep => {
