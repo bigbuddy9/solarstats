@@ -157,34 +157,47 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
       </div>
 
       {/* Stats */}
-      {/* Row 1: Sales */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-        <StatsCard label="One Call Closes" value={stats.sameWeekSales.toString()} />
-        <StatsCard label="Follow Up Sales" value={stats.followUpSales.toString()} />
-        <StatsCard label="Total Sales" value={stats.totalSales.toString()} />
-        <StatsCard label="Revenue" value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} />
-      </div>
-      {/* Row 2: kW */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-        <StatsCard label="Total Solar kW" value={stats.totalSolarKw > 0 ? stats.totalSolarKw.toFixed(2) : '—'} />
-        <StatsCard label="Avg Solar kW" value={stats.avgSolarKw > 0 ? stats.avgSolarKw.toFixed(2) : '—'} />
-        <StatsCard label="Total Battery kW" value={stats.totalBatteryKw > 0 ? stats.totalBatteryKw.toFixed(1) : '—'} />
-        <StatsCard label="Avg Battery kW" value={stats.avgBatteryKw > 0 ? stats.avgBatteryKw.toFixed(1) : '—'} />
-      </div>
-      {/* Row 3: Activity + Payment */}
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-8">
-        <StatsCard label="Sat Rate" value={`${stats.satRate}%`} />
-        <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
-        <StatsCard label="Confirmed Bookings" value={stats.confirmedBookings.toString()} />
-        <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
-        <StatsCard label="Cash" value={`${stats.cashSales} (${stats.cashPct}%)`} />
-        <StatsCard label="Finance" value={`${stats.financeSales} (${100 - stats.cashPct}%)`} />
+      <div className="space-y-6 mb-10">
+        {/* Sales */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Sales</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatsCard label="One Call Closes" value={stats.sameWeekSales.toString()} accent="yellow" />
+            <StatsCard label="Follow Up Sales" value={stats.followUpSales.toString()} accent="yellow" />
+            <StatsCard label="Total Sales" value={stats.totalSales.toString()} accent="yellow" />
+            <StatsCard label="Revenue" value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} accent="green" />
+          </div>
+        </div>
+
+        {/* System */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">System</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatsCard label="Total Solar kW" value={stats.totalSolarKw > 0 ? stats.totalSolarKw.toFixed(2) : '—'} />
+            <StatsCard label="Avg Solar kW" value={stats.avgSolarKw > 0 ? stats.avgSolarKw.toFixed(2) : '—'} />
+            <StatsCard label="Total Battery kW" value={stats.totalBatteryKw > 0 ? stats.totalBatteryKw.toFixed(1) : '—'} />
+            <StatsCard label="Avg Battery kW" value={stats.avgBatteryKw > 0 ? stats.avgBatteryKw.toFixed(1) : '—'} />
+          </div>
+        </div>
+
+        {/* Activity */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Activity</p>
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+            <StatsCard label="Sat Rate" value={`${stats.satRate}%`} />
+            <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
+            <StatsCard label="Confirmed Bookings" value={stats.confirmedBookings.toString()} />
+            <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
+            <StatsCard label="Cash" value={stats.cashSales.toString()} sub={`${stats.cashPct}% of sales`} />
+            <StatsCard label="Finance" value={stats.financeSales.toString()} sub={`${100 - stats.cashPct}% of sales`} />
+          </div>
+        </div>
       </div>
 
       {/* Owner: rep leaderboard */}
       {isOwner && selectedRep === 'all' && reps.length > 1 && (
-        <div className="bg-black border border-white/5 rounded-xl p-5 mb-8">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Rep Leaderboard</h3>
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-8">
+          <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-5">Leaderboard</h3>
           <div className="space-y-2">
             {reps.map(rep => {
               const repCalls = filtered.filter(c => c.user_id === rep.id)
