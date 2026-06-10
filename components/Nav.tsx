@@ -37,6 +37,9 @@ export default function Nav({ settings, profile }: NavProps) {
             <Link href="/dashboard" className={linkCls('/dashboard')}>
               {profile?.role === 'owner' ? 'Team Dashboard' : 'My Stats'}
             </Link>
+            {profile?.role === 'owner' && (
+              <Link href="/team" className={linkCls('/team')}>Team</Link>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-500">{profile?.name}</span>
