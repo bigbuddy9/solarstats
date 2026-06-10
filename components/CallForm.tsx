@@ -35,10 +35,10 @@ const OUTCOMES = [
 ]
 
 const DISQ_REASONS = [
-  { value: 'bill-too-low',     label: 'Bill Too Low' },
-  { value: 'roof-issue',       label: 'Roof Issue' },
-  { value: 'credit-financing', label: 'Credit / Financing' },
-  { value: 'other',            label: 'Other' },
+  { value: 'bill-dnq',      label: 'Bill DNQ' },
+  { value: 'property-dnq',  label: 'Property DNQ' },
+  { value: 'finance-dnq',   label: 'Finance DNQ' },
+  { value: 'other',         label: 'Other' },
 ]
 
 const NO_SALE_REASONS = [
