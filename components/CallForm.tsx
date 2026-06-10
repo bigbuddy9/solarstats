@@ -132,19 +132,11 @@ export default function CallForm({ userId, repName }: CallFormProps) {
         </div>
       )}
 
-      {/* Rep name display + date */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Your Name</Label>
-          <div className="w-full bg-white/[0.03] border border-white/10 rounded-lg px-4 py-3 text-gray-400 text-sm">
-            {repName}
-          </div>
-        </div>
-        <div>
-          <Label>Appointment Date &amp; Time</Label>
-          <input type="datetime-local" {...register('appointment_date')} className={inputCls(!!errors.appointment_date)} />
-          <ErrMsg msg={errors.appointment_date?.message} />
-        </div>
+      {/* Date */}
+      <div>
+        <Label>Appointment Date &amp; Time</Label>
+        <input type="datetime-local" {...register('appointment_date')} className={inputCls(!!errors.appointment_date)} />
+        <ErrMsg msg={errors.appointment_date?.message} />
       </div>
 
       {/* Homeowner */}

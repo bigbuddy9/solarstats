@@ -50,7 +50,7 @@ export default function Nav({ settings, profile }: NavProps) {
             )}
             <button
               onClick={handleSignOut}
-              className="text-xs font-medium text-gray-400 hover:text-black transition-all px-3 py-1.5 rounded-lg border border-white/10 hover:bg-brand hover:border-brand"
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-400 hover:text-white hover:bg-white/5`}
             >
               Sign Out
             </button>
