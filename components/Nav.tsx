@@ -27,6 +27,8 @@ export default function Nav({ settings, profile }: NavProps) {
         : 'text-gray-400 hover:text-white hover:bg-white/5'
     }`
 
+  const bizName = settings?.business_name ?? 'Team'
+
   return (
     <nav className="border-b border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -35,7 +37,7 @@ export default function Nav({ settings, profile }: NavProps) {
             <div className="h-2 w-2 rounded-full bg-brand mr-3" />
             <Link href="/log-call" className={linkCls('/log-call')}>Log Call</Link>
             <Link href="/dashboard" className={linkCls('/dashboard')}>
-              {profile?.role === 'owner' ? 'Team Dashboard' : 'My Stats'}
+              {profile?.role === 'owner' ? `${bizName} Dashboard` : `${bizName} Stats`}
             </Link>
             {profile?.role === 'owner' && (
               <Link href="/team" className={linkCls('/team')}>Team</Link>

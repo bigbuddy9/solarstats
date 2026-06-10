@@ -29,11 +29,17 @@ function computeStats(calls: Call[]) {
     'Under $20k': 15000, '$20k–$30k': 25000, '$30k–$40k': 35000,
     '$40k–$50k': 45000, '$50k–$60k': 55000, '$60k+': 65000,
   }
+  const kwMap: Record<string, number> = {
+    'Under 5 kW': 4, '5–8 kW': 6.5, '8–12 kW': 10, '12–16 kW': 14, '16+ kW': 18,
+  }
   const totalRevenue = calls
     .filter(c => c.outcome === 'closed')
     .reduce((sum, c) => sum + (dealMap[c.deal_value] ?? 0), 0)
+  const totalKw = calls
+    .filter(c => c.outcome === 'closed')
+    .reduce((sum, c) => sum + (kwMap[c.system_size] ?? 0), 0)
 
-  return { total, showRate, closeRate, closed, pipeline, totalRevenue }
+  return { total, showRate, closeRate, closed, pipeline, totalRevenue, totalKw }
 }
 
 interface Props {
@@ -43,7 +49,7 @@ interface Props {
   allProfiles: Profile[]
 }
 
-export default function DashboardClient({ initialCalls, profile, allProfiles }: Props) {
+export default function DashboardClient({ initialCalls, settings, profile, allProfiles }: Props) {
   const supabase = createClientComponentClient()
   const [calls, setCalls] = useState<Call[]>(initialCalls)
   const [period, setPeriod] = useState<Period>('month')
@@ -94,7 +100,7 @@ export default function DashboardClient({ initialCalls, profile, allProfiles }: 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-bold text-white">
-            {isOwner ? 'Team Dashboard' : 'My Stats'}
+            {isOwner ? `${settings?.business_name ?? 'Team'} Dashboard` : `${settings?.business_name ?? 'My'} Stats`}
           </h2>
           <p className="text-gray-500 text-sm mt-1">
             {isOwner ? 'Full team performance' : `Stats for ${profile?.name}`}
@@ -145,12 +151,13 @@ export default function DashboardClient({ initialCalls, profile, allProfiles }: 
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
         <StatsCard label="Appointments" value={stats.total.toString()} />
         <StatsCard label="Show Rate" value={`${stats.showRate}%`} />
         <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
-        <StatsCard label="Closed" value={stats.closed.toString()} />
+        <StatsCard label="Deals" value={stats.closed.toString()} />
         <StatsCard label="Pipeline" value={stats.pipeline.toString()} />
+        <StatsCard label="Total kW" value={stats.totalKw > 0 ? `${stats.totalKw} kW` : '—'} />
         <StatsCard label="Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} wide />
       </div>
 
@@ -168,7 +175,8 @@ export default function DashboardClient({ initialCalls, profile, allProfiles }: 
                   <div className="flex items-center gap-6 text-xs text-gray-400">
                     <span>{repStats.total} appts</span>
                     <span>{repStats.closeRate}% close</span>
-                    <span>{repStats.closed} closed</span>
+                    <span>{repStats.closed} deals</span>
+                    <span>{repStats.totalKw > 0 ? `${repStats.totalKw} kW` : '—'}</span>
                     <span className="text-green-400">${repStats.totalRevenue.toLocaleString()}</span>
                   </div>
                 </div>
