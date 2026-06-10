@@ -19,7 +19,9 @@ const schema = z.object({
   follow_up_reason: z.string().optional(),
   follow_up_intent: z.string().optional(),
   system_size: z.string().optional(),
+  battery_size: z.string().optional(),
   deal_value: z.string().optional(),
+  sale_type: z.enum(['same-week', 'follow-up']).optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -53,7 +55,6 @@ const INTENT_LEVELS = [
   { value: 'hot',  label: 'Hot',  tip: 'This should close — just needs the right push' },
 ]
 
-const SYSTEM_SIZES = ['Under 5 kW', '5–8 kW', '8–12 kW', '12–16 kW', '16+ kW']
 const DEAL_VALUES = ['Under $20k', '$20k–$30k', '$30k–$40k', '$40k–$50k', '$50k–$60k', '$60k+']
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -106,7 +107,9 @@ export default function CallForm({ userId, repName }: CallFormProps) {
       follow_up_reason: data.follow_up_reason ?? '',
       follow_up_intent: data.follow_up_intent ?? '',
       system_size: data.system_size ?? '',
+      battery_size: data.battery_size ?? '0',
       deal_value: data.deal_value ?? '',
+      sale_type: data.sale_type ?? 'same-week',
     }])
     if (error) { setServerError(error.message); return }
     setSuccess(true)
@@ -265,14 +268,50 @@ export default function CallForm({ userId, repName }: CallFormProps) {
 
       {/* Closed deal details */}
       {outcome === 'closed' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-yellow-400/5 border border-yellow-400/20">
+        <div className="space-y-4 p-4 rounded-xl bg-yellow-400/5 border border-yellow-400/20">
+          {/* Sale type */}
           <div>
-            <Label>System Size</Label>
-            <select {...register('system_size')} className={inputCls()}>
-              <option value="">Select…</option>
-              {SYSTEM_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Label>Sale Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: 'same-week', label: 'Same Week Sale' },
+                { value: 'follow-up', label: 'Follow Up Sale' },
+              ].map(s => (
+                <label key={s.value} className="cursor-pointer">
+                  <input type="radio" value={s.value} {...register('sale_type')} className="sr-only peer" defaultChecked={s.value === 'same-week'} />
+                  <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-brand peer-checked:text-black peer-checked:bg-brand hover:border-white/20">
+                    {s.label}
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Solar kW</Label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="e.g. 6.6"
+                {...register('system_size')}
+                className={inputCls()}
+              />
+            </div>
+            <div>
+              <Label>Battery kW</Label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                placeholder="0 if no battery"
+                {...register('battery_size')}
+                className={inputCls()}
+              />
+            </div>
+          </div>
+
           <div>
             <Label>Deal Value</Label>
             <select {...register('deal_value')} className={inputCls()}>

@@ -18,28 +18,32 @@ function startOf(period: Period): Date | null {
 }
 
 function computeStats(calls: Call[]) {
-  const total = calls.length
-  const showed = calls.filter(c => c.outcome !== 'no-show').length
-  const closed = calls.filter(c => c.outcome === 'closed').length
-  const pipeline = calls.filter(c => c.outcome === 'follow-up').length
-  const showRate = total > 0 ? Math.round((showed / total) * 100) : 0
-  const closeRate = showed > 0 ? Math.round((closed / showed) * 100) : 0
+  const confirmedBookings = calls.length
+  const meetingsSat = calls.filter(c => c.outcome !== 'no-show').length
+  const closes = calls.filter(c => c.outcome === 'closed')
+  const sameWeekSales = closes.filter(c => c.sale_type === 'same-week').length
+  const followUpSales = closes.filter(c => c.sale_type === 'follow-up').length
+  const totalSales = closes.length
+
+  const satRate = confirmedBookings > 0 ? Math.round((meetingsSat / confirmedBookings) * 100) : 0
+  const closeRate = meetingsSat > 0 ? Math.round((totalSales / meetingsSat) * 100) : 0
 
   const dealMap: Record<string, number> = {
     'Under $20k': 15000, '$20k–$30k': 25000, '$30k–$40k': 35000,
     '$40k–$50k': 45000, '$50k–$60k': 55000, '$60k+': 65000,
   }
-  const kwMap: Record<string, number> = {
-    'Under 5 kW': 4, '5–8 kW': 6.5, '8–12 kW': 10, '12–16 kW': 14, '16+ kW': 18,
-  }
-  const totalRevenue = calls
-    .filter(c => c.outcome === 'closed')
-    .reduce((sum, c) => sum + (dealMap[c.deal_value] ?? 0), 0)
-  const totalKw = calls
-    .filter(c => c.outcome === 'closed')
-    .reduce((sum, c) => sum + (kwMap[c.system_size] ?? 0), 0)
+  const totalRevenue = closes.reduce((sum, c) => sum + (dealMap[c.deal_value] ?? 0), 0)
 
-  return { total, showRate, closeRate, closed, pipeline, totalRevenue, totalKw }
+  const totalSolarKw = closes.reduce((sum, c) => sum + (parseFloat(c.system_size) || 0), 0)
+  const avgSolarKw = totalSales > 0 ? totalSolarKw / totalSales : 0
+  const totalBatteryKw = closes.reduce((sum, c) => sum + (parseFloat(c.battery_size) || 0), 0)
+  const avgBatteryKw = totalSales > 0 ? totalBatteryKw / totalSales : 0
+
+  return {
+    confirmedBookings, meetingsSat, satRate, closeRate,
+    sameWeekSales, followUpSales, totalSales,
+    totalSolarKw, avgSolarKw, totalBatteryKw, avgBatteryKw, totalRevenue,
+  }
 }
 
 interface Props {
@@ -151,14 +155,26 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-        <StatsCard label="Appointments" value={stats.total.toString()} />
-        <StatsCard label="Show Rate" value={`${stats.showRate}%`} />
+      {/* Row 1: Sales */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <StatsCard label="Same Week Sales" value={stats.sameWeekSales.toString()} />
+        <StatsCard label="Follow Up Sales" value={stats.followUpSales.toString()} />
+        <StatsCard label="Total Sales" value={stats.totalSales.toString()} />
+        <StatsCard label="Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} />
+      </div>
+      {/* Row 2: kW */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <StatsCard label="Total Solar kW" value={stats.totalSolarKw > 0 ? stats.totalSolarKw.toFixed(2) : '—'} />
+        <StatsCard label="Avg Solar kW" value={stats.avgSolarKw > 0 ? stats.avgSolarKw.toFixed(2) : '—'} />
+        <StatsCard label="Total Battery kW" value={stats.totalBatteryKw > 0 ? stats.totalBatteryKw.toFixed(1) : '—'} />
+        <StatsCard label="Avg Battery kW" value={stats.avgBatteryKw > 0 ? stats.avgBatteryKw.toFixed(1) : '—'} />
+      </div>
+      {/* Row 3: Activity */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <StatsCard label="Sat Rate" value={`${stats.satRate}%`} />
         <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
-        <StatsCard label="Deals" value={stats.closed.toString()} />
-        <StatsCard label="Pipeline" value={stats.pipeline.toString()} />
-        <StatsCard label="Total kW" value={stats.totalKw > 0 ? `${stats.totalKw} kW` : '—'} />
-        <StatsCard label="Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} wide />
+        <StatsCard label="Confirmed Bookings" value={stats.confirmedBookings.toString()} />
+        <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
       </div>
 
       {/* Owner: rep leaderboard */}
@@ -173,10 +189,11 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
                 <div key={rep.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
                   <span className="text-white text-sm font-medium">{rep.name}</span>
                   <div className="flex items-center gap-6 text-xs text-gray-400">
-                    <span>{repStats.total} appts</span>
+                    <span>{repStats.confirmedBookings} bookings</span>
+                    <span>{repStats.satRate}% sat</span>
+                    <span>{repStats.totalSales} sales ({repStats.followUpSales} FU)</span>
                     <span>{repStats.closeRate}% close</span>
-                    <span>{repStats.closed} deals</span>
-                    <span>{repStats.totalKw > 0 ? `${repStats.totalKw} kW` : '—'}</span>
+                    <span>{repStats.totalSolarKw > 0 ? `${repStats.totalSolarKw.toFixed(1)} kW` : '—'}</span>
                     <span className="text-green-400">${repStats.totalRevenue.toLocaleString()}</span>
                   </div>
                 </div>

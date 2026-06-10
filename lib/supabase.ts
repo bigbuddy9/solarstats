@@ -31,7 +31,9 @@ export interface Call {
   follow_up_reason: string
   follow_up_intent: string
   system_size: string
+  battery_size: string
   deal_value: string
+  sale_type: 'same-week' | 'follow-up'
 }
 
 export interface Settings {
