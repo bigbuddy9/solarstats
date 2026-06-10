@@ -43,7 +43,7 @@ const DISQ_REASONS = [
 const NO_SALE_REASONS = [
   { value: 'price',          label: 'Price',          tip: "Too expensive, can't afford it, doesn't see the value" },
   { value: 'think-about-it', label: 'Think About It', tip: "Classic stall — won't commit on the spot" },
-  { value: 'shop-around',    label: 'Shop Around',    tip: 'Wants to compare quotes or see other options' },
+  { value: 'compare-market', label: 'Compare Market', tip: 'Wants to compare quotes or see other options' },
   { value: 'authority',      label: 'Authority',      tip: 'Needs spouse, partner, or someone else to decide' },
   { value: 'timing',         label: 'Timing',         tip: 'Not ready, wants to wait, bad personal timing' },
   { value: 'not-interested', label: 'Not Interested', tip: 'Flat no — done with the conversation' },
