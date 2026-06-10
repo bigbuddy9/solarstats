@@ -234,23 +234,6 @@ export default function CallForm({ userId, repName }: CallFormProps) {
               ))}
             </div>
           </div>
-          <div>
-            <Label>Intent</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {INTENT_LEVELS.map(i => (
-                <label key={i.value} className="cursor-pointer" title={i.tip}>
-                  <input type="radio" value={i.value} {...register('follow_up_intent')} className="sr-only peer" />
-                  <div className={`text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all hover:border-white/20 leading-tight
-                    ${i.value === 'cold' ? 'peer-checked:border-blue-500 peer-checked:text-blue-400 peer-checked:bg-blue-500/10' : ''}
-                    ${i.value === 'warm' ? 'peer-checked:border-orange-400 peer-checked:text-orange-300 peer-checked:bg-orange-500/10' : ''}
-                    ${i.value === 'hot'  ? 'peer-checked:border-red-500 peer-checked:text-red-400 peer-checked:bg-red-500/10' : ''}
-                  `}>
-                    {i.label}
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
