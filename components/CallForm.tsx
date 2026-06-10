@@ -7,8 +7,7 @@ import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 
 const schema = z.object({
-  homeowner_first_name: z.string().min(1, 'Required'),
-  homeowner_last_name: z.string().min(1, 'Required'),
+  homeowner_name: z.string().min(1, 'Required'),
   address: z.string().min(1, 'Required'),
   phone: z.string().min(1, 'Required'),
   email: z.string().email('Invalid email'),
@@ -92,11 +91,14 @@ export default function CallForm({ userId, repName }: CallFormProps) {
 
   async function onSubmit(data: FormData) {
     setServerError('')
+    const nameParts = data.homeowner_name.trim().split(/\s+/)
+    const homeowner_first_name = nameParts[0]
+    const homeowner_last_name = nameParts.slice(1).join(' ') || ''
     const { error } = await supabase.from('calls').insert([{
       user_id: userId,
       rep_name: repName,
-      homeowner_first_name: data.homeowner_first_name,
-      homeowner_last_name: data.homeowner_last_name,
+      homeowner_first_name,
+      homeowner_last_name,
       address: data.address,
       phone: data.phone,
       email: data.email,
@@ -132,24 +134,17 @@ export default function CallForm({ userId, repName }: CallFormProps) {
         </div>
       )}
 
-      {/* Date */}
-      <div>
-        <Label>Appointment Date &amp; Time</Label>
-        <input type="datetime-local" {...register('appointment_date')} className={inputCls(!!errors.appointment_date)} />
-        <ErrMsg msg={errors.appointment_date?.message} />
-      </div>
-
-      {/* Homeowner */}
+      {/* Homeowner + Date */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label>Homeowner First Name</Label>
-          <input {...register('homeowner_first_name')} placeholder="Jane" className={inputCls(!!errors.homeowner_first_name)} />
-          <ErrMsg msg={errors.homeowner_first_name?.message} />
+          <Label>Homeowner Full Name</Label>
+          <input {...register('homeowner_name')} placeholder="Jane Doe" className={inputCls(!!errors.homeowner_name)} />
+          <ErrMsg msg={errors.homeowner_name?.message} />
         </div>
         <div>
-          <Label>Homeowner Last Name</Label>
-          <input {...register('homeowner_last_name')} placeholder="Doe" className={inputCls(!!errors.homeowner_last_name)} />
-          <ErrMsg msg={errors.homeowner_last_name?.message} />
+          <Label>Appointment Date &amp; Time</Label>
+          <input type="datetime-local" {...register('appointment_date')} className={inputCls(!!errors.appointment_date)} />
+          <ErrMsg msg={errors.appointment_date?.message} />
         </div>
       </div>
 
