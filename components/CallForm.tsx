@@ -84,8 +84,9 @@ export default function CallForm({ userId, repName }: CallFormProps) {
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState('')
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting, isValid } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    mode: 'onChange',
     defaultValues: { appointment_date: new Date().toISOString().slice(0, 16) },
   })
 
@@ -298,8 +299,12 @@ export default function CallForm({ userId, repName }: CallFormProps) {
 
       <button
         type="submit"
-        disabled={isSubmitting}
-        className="w-full bg-brand text-black font-bold py-3.5 rounded-xl hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm tracking-wide uppercase"
+        disabled={isSubmitting || !isValid}
+        className={`w-full font-bold py-3.5 rounded-xl transition-all text-sm tracking-wide uppercase
+          ${isValid && !isSubmitting
+            ? 'bg-brand text-black hover:opacity-90 active:scale-[0.99] cursor-pointer'
+            : 'bg-white/10 text-gray-600 cursor-not-allowed'
+          }`}
       >
         {isSubmitting ? 'Saving…' : 'Submit'}
       </button>
