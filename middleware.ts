@@ -16,7 +16,7 @@ export async function middleware(req: NextRequest) {
 
   if (session && pathname.startsWith('/login')) {
     const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/log-call'
+    redirectUrl.pathname = '/'
     return NextResponse.redirect(redirectUrl)
   }
 
