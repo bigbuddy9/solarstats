@@ -86,7 +86,7 @@ export default function CallForm({ userId, repName }: CallFormProps) {
 
   const { register, handleSubmit, reset, control, formState: { errors, isSubmitting, isValid } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    mode: 'onChange',
+    mode: 'all',
     defaultValues: { appointment_date: new Date().toISOString().slice(0, 16) },
   })
 
