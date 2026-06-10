@@ -37,6 +37,7 @@ const DISQ_REASONS = [
   { value: 'bill-too-low',     label: 'Bill Too Low' },
   { value: 'roof-issue',       label: 'Roof Issue' },
   { value: 'credit-financing', label: 'Credit / Financing' },
+  { value: 'other',            label: 'Other' },
 ]
 
 const NO_SALE_REASONS = [
@@ -187,7 +188,7 @@ export default function CallForm({ userId, repName }: CallFormProps) {
       {outcome === 'disqualified' && (
         <div>
           <Label>Disqualified Reason</Label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {DISQ_REASONS.map(r => (
               <label key={r.value} className="cursor-pointer">
                 <input type="radio" value={r.value} {...register('disqualified_reason')} className="sr-only peer" />
