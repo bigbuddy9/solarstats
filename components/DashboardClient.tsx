@@ -29,11 +29,10 @@ function computeStats(calls: Call[]) {
   const satRate = confirmedBookings > 0 ? Math.round((meetingsSat / confirmedBookings) * 100) : 0
   const closeRate = meetingsSat > 0 ? Math.round((totalSales / meetingsSat) * 100) : 0
 
-  const dealMap: Record<string, number> = {
-    'Under $20k': 15000, '$20k–$30k': 25000, '$30k–$40k': 35000,
-    '$40k–$50k': 45000, '$50k–$60k': 55000, '$60k+': 65000,
-  }
-  const totalRevenue = closes.reduce((sum, c) => sum + (dealMap[c.deal_value] ?? 0), 0)
+  const totalRevenue = closes.reduce((sum, c) => sum + (parseFloat(c.deal_value) || 0), 0)
+  const cashSales = closes.filter(c => c.payment_type === 'cash').length
+  const financeSales = closes.filter(c => c.payment_type === 'finance').length
+  const cashPct = totalSales > 0 ? Math.round((cashSales / totalSales) * 100) : 0
 
   const totalSolarKw = closes.reduce((sum, c) => sum + (parseFloat(c.system_size) || 0), 0)
   const avgSolarKw = totalSales > 0 ? totalSolarKw / totalSales : 0
@@ -43,7 +42,8 @@ function computeStats(calls: Call[]) {
   return {
     confirmedBookings, meetingsSat, satRate, closeRate,
     sameWeekSales, followUpSales, totalSales,
-    totalSolarKw, avgSolarKw, totalBatteryKw, avgBatteryKw, totalRevenue,
+    totalSolarKw, avgSolarKw, totalBatteryKw, avgBatteryKw,
+    totalRevenue, cashSales, financeSales, cashPct,
   }
 }
 
@@ -159,10 +159,10 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
       {/* Stats */}
       {/* Row 1: Sales */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-        <StatsCard label="Same Week Sales" value={stats.sameWeekSales.toString()} />
+        <StatsCard label="One Call Closes" value={stats.sameWeekSales.toString()} />
         <StatsCard label="Follow Up Sales" value={stats.followUpSales.toString()} />
         <StatsCard label="Total Sales" value={stats.totalSales.toString()} />
-        <StatsCard label="Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} />
+        <StatsCard label="Revenue" value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} />
       </div>
       {/* Row 2: kW */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
@@ -171,12 +171,14 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
         <StatsCard label="Total Battery kW" value={stats.totalBatteryKw > 0 ? stats.totalBatteryKw.toFixed(1) : '—'} />
         <StatsCard label="Avg Battery kW" value={stats.avgBatteryKw > 0 ? stats.avgBatteryKw.toFixed(1) : '—'} />
       </div>
-      {/* Row 3: Activity */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      {/* Row 3: Activity + Payment */}
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-8">
         <StatsCard label="Sat Rate" value={`${stats.satRate}%`} />
         <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
         <StatsCard label="Confirmed Bookings" value={stats.confirmedBookings.toString()} />
         <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
+        <StatsCard label="Cash" value={`${stats.cashSales} (${stats.cashPct}%)`} />
+        <StatsCard label="Finance" value={`${stats.financeSales} (${100 - stats.cashPct}%)`} />
       </div>
 
       {/* Owner: rep leaderboard */}

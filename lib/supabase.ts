@@ -34,6 +34,7 @@ export interface Call {
   battery_size: string
   deal_value: string
   sale_type: 'same-week' | 'follow-up'
+  payment_type: 'cash' | 'finance'
 }
 
 export interface Settings {

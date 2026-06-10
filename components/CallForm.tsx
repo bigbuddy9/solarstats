@@ -20,6 +20,7 @@ const schema = z.object({
   system_size: z.string().optional(),
   battery_size: z.string().optional(),
   deal_value: z.string().optional(),
+  payment_type: z.enum(['cash', 'finance']).optional(),
   sale_type: z.enum(['same-week', 'follow-up']).optional(),
 })
 
@@ -55,7 +56,6 @@ const INTENT_LEVELS = [
   { value: 'hot',  label: 'Hot',  tip: 'This should close — just needs the right push' },
 ]
 
-const DEAL_VALUES = ['Under $20k', '$20k–$30k', '$30k–$40k', '$40k–$50k', '$50k–$60k', '$60k+']
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -113,6 +113,7 @@ export default function CallForm({ userId, repName }: CallFormProps) {
       battery_size: data.battery_size ?? '0',
       deal_value: data.deal_value ?? '',
       sale_type: data.sale_type ?? 'same-week',
+      payment_type: data.payment_type ?? 'finance',
     }])
     if (error) { setServerError(error.message); return }
     setSuccess(true)
@@ -245,7 +246,7 @@ export default function CallForm({ userId, repName }: CallFormProps) {
             <Label>Sale Type</Label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { value: 'same-week', label: 'Same Week Sale' },
+                { value: 'same-week', label: 'One Call Close' },
                 { value: 'follow-up', label: 'Follow Up Sale' },
               ].map(s => (
                 <label key={s.value} className="cursor-pointer">
@@ -261,34 +262,35 @@ export default function CallForm({ userId, repName }: CallFormProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Solar kW</Label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="e.g. 6.6"
-                {...register('system_size')}
-                className={inputCls()}
-              />
+              <input type="number" step="0.01" min="0" placeholder="e.g. 6.6"
+                {...register('system_size')} className={inputCls()} />
             </div>
             <div>
               <Label>Battery kW</Label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="0 if no battery"
-                {...register('battery_size')}
-                className={inputCls()}
-              />
+              <input type="number" step="0.1" min="0" placeholder="0 if no battery"
+                {...register('battery_size')} className={inputCls()} />
             </div>
           </div>
 
-          <div>
-            <Label>Deal Value</Label>
-            <select {...register('deal_value')} className={inputCls()}>
-              <option value="">Select…</option>
-              {DEAL_VALUES.map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Revenue ($)</Label>
+              <input type="number" step="1" min="0" placeholder="e.g. 28500"
+                {...register('deal_value')} className={inputCls()} />
+            </div>
+            <div>
+              <Label>Payment Type</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[{ value: 'cash', label: 'Cash' }, { value: 'finance', label: 'Finance' }].map(p => (
+                  <label key={p.value} className="cursor-pointer">
+                    <input type="radio" value={p.value} {...register('payment_type')} className="sr-only peer" />
+                    <div className="text-center px-3 py-3 rounded-lg border border-white/10 text-xs font-medium text-gray-400 transition-all peer-checked:border-brand peer-checked:text-black peer-checked:bg-brand hover:border-white/20">
+                      {p.label}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
