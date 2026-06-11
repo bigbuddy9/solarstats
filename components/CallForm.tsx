@@ -264,12 +264,12 @@ export default function CallForm({ userId, repName }: CallFormProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Solar kW</Label>
-              <input type="number" step="0.01" min="0" placeholder="e.g. 6.6"
+              <input type="number" step="0.01" min="0" placeholder=""
                 {...register('system_size')} className={inputCls()} />
             </div>
             <div>
               <Label>Battery kW</Label>
-              <input type="number" step="0.1" min="0" placeholder="0 if no battery"
+              <input type="number" step="0.1" min="0" placeholder=""
                 {...register('battery_size')} className={inputCls()} />
             </div>
           </div>
@@ -277,7 +277,7 @@ export default function CallForm({ userId, repName }: CallFormProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Revenue ($)</Label>
-              <input type="number" step="1" min="0" placeholder="e.g. 28500"
+              <input type="number" step="1" min="0" placeholder=""
                 {...register('deal_value')} className={inputCls()} />
             </div>
             <div>

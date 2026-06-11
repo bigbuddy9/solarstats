@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Call, CallOutcome } from '@/lib/supabase'
 
 interface CallsTableProps {
   calls: Call[]
+  isOwner?: boolean
+  onDelete?: (id: string) => void
 }
 
 const OUTCOME_BADGES: Record<CallOutcome, string> = {
@@ -28,12 +31,22 @@ const ALL_OUTCOMES: CallOutcome[] = ['no-show', 'disqualified', 'no-sale', 'foll
 type SortKey = 'appointment_date' | 'rep_name' | 'outcome'
 type SortDir = 'asc' | 'desc'
 
-export default function CallsTable({ calls }: CallsTableProps) {
+export default function CallsTable({ calls, isOwner, onDelete }: CallsTableProps) {
+  const supabase = createClientComponentClient()
   const [outcomeFilter, setOutcomeFilter] = useState<CallOutcome | 'all'>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('appointment_date')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this call log? This cannot be undone.')) return
+    setDeleting(id)
+    await supabase.from('calls').delete().eq('id', id)
+    setDeleting(null)
+    onDelete?.(id)
+  }
 
   const filtered = useMemo(() => {
     let rows = [...calls]
@@ -101,6 +114,7 @@ export default function CallsTable({ calls }: CallsTableProps) {
                 </th>
                 <th className="px-4 py-3 text-gray-500 font-medium">Detail</th>
                 <th className="px-4 py-3 text-gray-500 font-medium">Deal Value</th>
+                {isOwner && <th className="px-4 py-3" />}
               </tr>
             </thead>
             <tbody>
@@ -122,7 +136,18 @@ export default function CallsTable({ calls }: CallsTableProps) {
                       ? call.disqualified_reason.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                       : call.system_size || '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{call.deal_value || '—'}</td>
+                  <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{call.deal_value ? `$${Number(call.deal_value).toLocaleString()}` : '—'}</td>
+                  {isOwner && (
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleDelete(call.id)}
+                        disabled={deleting === call.id}
+                        className="text-xs text-gray-600 hover:text-red-400 transition-colors disabled:opacity-40"
+                      >
+                        {deleting === call.id ? '…' : 'Delete'}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
