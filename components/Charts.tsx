@@ -19,19 +19,13 @@ function buildAppointmentData(calls: Call[], period: Period) {
     const date = new Date(c.appointment_date)
     let key: string
 
-    if (period === 'today') {
-      const h = date.getHours()
-      const suffix = h >= 12 ? 'pm' : 'am'
-      key = `${h === 0 ? 12 : h > 12 ? h - 12 : h}${suffix}`
-    } else if (period === 'week') {
+    if (period === 'today' || period === 'week') {
       key = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     } else if (period === 'month') {
-      // Week starting Sunday
       const start = new Date(date)
       start.setDate(date.getDate() - date.getDay())
       key = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     } else {
-      // year or all → per month
       key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
     }
 
@@ -39,23 +33,11 @@ function buildAppointmentData(calls: Call[], period: Period) {
   })
 
   const entries = Array.from(map.entries()).map(([label, count]) => ({ label, count }))
-
-  // For "today" sort by hour numerically
-  if (period === 'today') {
-    const hourOrder = (s: string) => {
-      const n = parseInt(s)
-      const pm = s.endsWith('pm')
-      if (n === 12) return pm ? 12 : 0
-      return pm ? n + 12 : n
-    }
-    entries.sort((a, b) => hourOrder(a.label) - hourOrder(b.label))
-  }
-
   return period === 'all' ? entries : entries.slice(-12)
 }
 
 const PERIOD_LABELS: Record<Period, string> = {
-  today: 'Appointments / Hour',
+  today: 'Appointments / Day',
   week:  'Appointments / Day',
   month: 'Appointments / Week',
   year:  'Appointments / Month',
