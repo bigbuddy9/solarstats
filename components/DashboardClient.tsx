@@ -9,13 +9,46 @@ import type { Call, Settings, Profile } from '@/lib/supabase'
 
 type Period = 'today' | 'week' | 'month' | 'year' | 'all'
 
-function startOf(period: Period): Date | null {
+function getWindow(period: Period, offset: number): { start: Date | null; end: Date | null; label: string } {
+  if (period === 'all') return { start: null, end: null, label: 'All Time' }
+
   const now = new Date()
-  if (period === 'today') { const d = new Date(now); d.setHours(0, 0, 0, 0); return d }
-  if (period === 'week') { const d = new Date(now); d.setDate(now.getDate() - 7); return d }
-  if (period === 'month') { const d = new Date(now); d.setMonth(now.getMonth() - 1); return d }
-  if (period === 'year') { const d = new Date(now); d.setFullYear(now.getFullYear() - 1); return d }
-  return null
+
+  if (period === 'today') {
+    const d = new Date(now)
+    d.setDate(d.getDate() - offset)
+    const start = new Date(d); start.setHours(0, 0, 0, 0)
+    const end   = new Date(d); end.setHours(23, 59, 59, 999)
+    const label = offset === 0 ? 'Today' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return { start, end, label }
+  }
+
+  if (period === 'week') {
+    const end = new Date(now)
+    end.setDate(end.getDate() - offset * 7)
+    end.setHours(23, 59, 59, 999)
+    const start = new Date(end)
+    start.setDate(end.getDate() - 6)
+    start.setHours(0, 0, 0, 0)
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const label = offset === 0 ? 'This Week' : `${fmt(start)} – ${fmt(end)}`
+    return { start, end, label }
+  }
+
+  if (period === 'month') {
+    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+    const start = new Date(d.getFullYear(), d.getMonth(), 1)
+    const end   = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999)
+    const label = offset === 0 ? 'This Month' : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    return { start, end, label }
+  }
+
+  // year
+  const yr = now.getFullYear() - offset
+  const start = new Date(yr, 0, 1)
+  const end   = new Date(yr, 11, 31, 23, 59, 59, 999)
+  const label = offset === 0 ? 'This Year' : `${yr}`
+  return { start, end, label }
 }
 
 function computeStats(calls: Call[]) {
@@ -58,8 +91,15 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
   const supabase = createClientComponentClient()
   const [calls, setCalls] = useState<Call[]>(initialCalls)
   const [period, setPeriod] = useState<Period>('month')
+  const [offset, setOffset] = useState(0)
   const [selectedRep, setSelectedRep] = useState<string>('all')
   const isOwner = profile?.role === 'owner'
+
+  // Reset offset when period changes
+  function handlePeriodChange(p: Period) {
+    setPeriod(p)
+    setOffset(0)
+  }
 
   useEffect(() => {
     const channel = supabase
@@ -72,32 +112,32 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
     return () => { supabase.removeChannel(channel) }
   }, [supabase])
 
+  const { start, end, label: periodLabel } = useMemo(() => getWindow(period, offset), [period, offset])
+
   const filtered = useMemo(() => {
     let rows = calls
 
-    // Reps only see their own
     if (!isOwner) {
       rows = rows.filter(c => c.user_id === profile?.id)
     } else if (selectedRep !== 'all') {
       rows = rows.filter(c => c.user_id === selectedRep)
     }
 
-    // Time filter
-    const start = startOf(period)
     if (start) rows = rows.filter(c => new Date(c.appointment_date) >= start)
+    if (end)   rows = rows.filter(c => new Date(c.appointment_date) <= end)
 
     return rows
-  }, [calls, period, selectedRep, isOwner, profile])
+  }, [calls, period, offset, selectedRep, isOwner, profile, start, end])
 
   const stats = computeStats(filtered)
   const reps = allProfiles.filter(p => p.role === 'rep')
 
   const PERIODS: { value: Period; label: string }[] = [
     { value: 'today', label: 'Today' },
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' },
-    { value: 'year', label: 'This Year' },
-    { value: 'all', label: 'All Time' },
+    { value: 'week',  label: 'Week' },
+    { value: 'month', label: 'Month' },
+    { value: 'year',  label: 'Year' },
+    { value: 'all',   label: 'All Time' },
   ]
 
   return (
@@ -114,7 +154,6 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Owner: rep filter */}
           {isOwner && (
             <select
               value={selectedRep}
@@ -128,24 +167,45 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
             </select>
           )}
 
-          {/* Period filter */}
-          <div className="flex bg-white/5 border border-white/10 rounded-lg p-1 gap-1">
-            {PERIODS.map(p => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  period === p.value
-                    ? 'bg-brand text-black'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+          {/* Period selector + navigation */}
+          <div className="flex items-center gap-2">
+            <div className="flex bg-white/5 border border-white/10 rounded-lg p-1 gap-1">
+              {PERIODS.map(p => (
+                <button
+                  key={p.value}
+                  onClick={() => handlePeriodChange(p.value)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    period === p.value
+                      ? 'bg-brand text-black'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Prev / label / next — hidden for All Time */}
+            {period !== 'all' && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setOffset(o => o + 1)}
+                  className="h-7 w-7 flex items-center justify-center rounded-md bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors text-sm"
+                >
+                  ‹
+                </button>
+                <span className="text-xs text-gray-400 min-w-[90px] text-center">{periodLabel}</span>
+                <button
+                  onClick={() => setOffset(o => Math.max(0, o - 1))}
+                  disabled={offset === 0}
+                  className="h-7 w-7 flex items-center justify-center rounded-md bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ›
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Live dot */}
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
@@ -158,7 +218,6 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
 
       {/* Stats */}
       <div className="space-y-6 mb-10">
-        {/* Sales */}
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Sales</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -169,7 +228,6 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
           </div>
         </div>
 
-        {/* System */}
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">System</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -180,20 +238,18 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
           </div>
         </div>
 
-        {/* Activity */}
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Activity</p>
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <StatsCard label="Appointments" value={stats.confirmedBookings.toString()} />
+            <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
             <StatsCard label="Sat Rate" value={`${stats.satRate}%`} />
             <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
-            <StatsCard label="Confirmed Bookings" value={stats.confirmedBookings.toString()} />
-            <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
             <StatsCard label="Cash / Finance" value={`${stats.cashSales} / ${stats.financeSales}`} sub={`${stats.cashPct}% cash · ${100 - stats.cashPct}% finance`} />
           </div>
         </div>
       </div>
 
-      {/* Owner: rep leaderboard */}
       {isOwner && selectedRep === 'all' && reps.length > 1 && (
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-8">
           <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-5">Leaderboard</h3>
@@ -219,7 +275,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
         </div>
       )}
 
-      <div className="mb-8"><Charts calls={filtered} period={period} /></div>
+      <div className="mb-8"><Charts calls={filtered} /></div>
       <CallsTable calls={filtered} isOwner={isOwner} onDelete={id => setCalls(prev => prev.filter(c => c.id !== id))} />
     </main>
   )

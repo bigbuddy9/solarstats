@@ -6,43 +6,7 @@ import {
 } from 'recharts'
 import type { Call, CallOutcome } from '@/lib/supabase'
 
-type Period = 'today' | 'week' | 'month' | 'year' | 'all'
-
-interface ChartsProps { calls: Call[]; period: Period }
-
-// --- Appointment chart: adapts grouping to selected period ---
-
-function buildAppointmentData(calls: Call[], period: Period) {
-  const map = new Map<string, number>()
-
-  calls.forEach(c => {
-    const date = new Date(c.appointment_date)
-    let key: string
-
-    if (period === 'today' || period === 'week') {
-      key = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-    } else if (period === 'month') {
-      const start = new Date(date)
-      start.setDate(date.getDate() - date.getDay())
-      key = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    } else {
-      key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
-    }
-
-    map.set(key, (map.get(key) ?? 0) + 1)
-  })
-
-  const entries = Array.from(map.entries()).map(([label, count]) => ({ label, count }))
-  return period === 'all' ? entries : entries.slice(-12)
-}
-
-const PERIOD_LABELS: Record<Period, string> = {
-  today: 'Appointments / Day',
-  week:  'Appointments / Day',
-  month: 'Appointments / Week',
-  year:  'Appointments / Month',
-  all:   'Appointments / Month',
-}
+interface ChartsProps { calls: Call[] }
 
 // --- Outcome chart ---
 
@@ -169,8 +133,7 @@ function ColoredBarChart({ data, emptyMsg }: { data: { name: string; value: numb
 const cardCls = "bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5"
 const sectionLabel = "text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-4"
 
-export default function Charts({ calls, period }: ChartsProps) {
-  const apptData    = buildAppointmentData(calls, period)
+export default function Charts({ calls }: ChartsProps) {
   const outcomeData = buildOutcomeData(calls)
   const objData     = buildObjectionData(calls)
   const disqData    = buildDisqData(calls)
@@ -211,20 +174,7 @@ export default function Charts({ calls, period }: ChartsProps) {
         </div>
       </div>
 
-      {/* Top right: Appointments (period-adaptive) */}
-      <div className={cardCls}>
-        <h3 className={sectionLabel}>{PERIOD_LABELS[period]}</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={apptData} margin={{ top: 4, right: 0, left: -24, bottom: 0 }} barCategoryGap="40%">
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#4b5563' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-            <Bar dataKey="count" fill="#eab308" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Bottom left: Objection breakdown */}
+      {/* Top right: Objection breakdown */}
       <div className={cardCls}>
         <h3 className={sectionLabel}>Objection Breakdown</h3>
         <ColoredBarChart data={objData} emptyMsg="No objections logged yet" />
