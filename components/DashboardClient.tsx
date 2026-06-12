@@ -240,7 +240,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
 
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Activity</p>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-start">
             <StatsCard label="Appointments" value={stats.confirmedBookings.toString()} />
             <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
             <StatsCard label="Sat Rate" value={`${stats.satRate}%`} />

@@ -115,7 +115,7 @@ function ColoredBarChart({ data, emptyMsg }: { data: { name: string; value: numb
     return <div className="h-[200px] flex items-center justify-center text-gray-600 text-sm">{emptyMsg}</div>
   }
   return (
-    <ResponsiveContainer width="100%" height={Math.max(160, data.length * 44)}>
+    <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
         <XAxis type="number" tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
         <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} width={105} axisLine={false} tickLine={false} />
