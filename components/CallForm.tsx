@@ -119,7 +119,22 @@ export default function CallForm({ userId, repName }: CallFormProps) {
     }])
     if (error) { setServerError(error.message); return }
     setSuccess(true)
-    reset({ appointment_date: new Date().toISOString().slice(0, 16) })
+    reset({
+      homeowner_name: '',
+      address: '',
+      phone: '',
+      email: '',
+      appointment_date: new Date().toISOString().slice(0, 16),
+      outcome: undefined,
+      disqualified_reason: undefined,
+      no_sale_reason: undefined,
+      follow_up_reason: undefined,
+      system_size: '',
+      battery_size: '',
+      deal_value: '',
+      payment_type: undefined,
+      sale_type: undefined,
+    })
     setTimeout(() => setSuccess(false), 4000)
   }
 
