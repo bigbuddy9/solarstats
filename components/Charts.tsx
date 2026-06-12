@@ -40,10 +40,32 @@ const OUTCOME_LABELS: Record<CallOutcome, string> = {
   'closed':       'Closed',
 }
 
+const OBJECTION_LABELS: Record<string, string> = {
+  'price':          'Price',
+  'think-about-it': 'Think About It',
+  'compare-market': 'Compare Market',
+  'authority':      'Authority',
+  'timing':         'Timing',
+  'not-interested': 'Not Interested',
+}
+
 function buildOutcomeData(calls: Call[]) {
   const map = new Map<string, number>()
   calls.forEach(c => map.set(c.outcome, (map.get(c.outcome) ?? 0) + 1))
   return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
+}
+
+function buildObjectionData(calls: Call[]) {
+  const map = new Map<string, number>()
+  calls
+    .filter(c => (c.outcome === 'no-sale' && c.no_sale_reason) || (c.outcome === 'follow-up' && c.follow_up_reason))
+    .forEach(c => {
+      const reason = c.outcome === 'no-sale' ? c.no_sale_reason : c.follow_up_reason
+      if (reason) map.set(reason, (map.get(reason) ?? 0) + 1)
+    })
+  return Array.from(map.entries())
+    .map(([key, value]) => ({ name: OBJECTION_LABELS[key] ?? key, value }))
+    .sort((a, b) => b.value - a.value)
 }
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -75,6 +97,7 @@ const sectionLabel = "text-[11px] font-semibold text-gray-500 uppercase tracking
 export default function Charts({ calls }: ChartsProps) {
   const weeklyData = buildWeeklyData(calls)
   const outcomeData = buildOutcomeData(calls)
+  const objectionData = buildObjectionData(calls)
 
   const disqData = calls
     .filter(c => c.outcome === 'disqualified' && c.disqualified_reason)
@@ -94,25 +117,12 @@ export default function Charts({ calls }: ChartsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Weekly bar chart */}
-      <div className={cardCls}>
-        <h3 className={sectionLabel}>Appointments / Week</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={weeklyData} margin={{ top: 4, right: 0, left: -24, bottom: 0 }} barCategoryGap="40%">
-            <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#4b5563' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-            <Bar dataKey="count" fill="#eab308" radius={[4, 4, 0, 0]} name="Appointments" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Outcome pie */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Top left: Outcome breakdown */}
       <div className={cardCls}>
         <h3 className={sectionLabel}>Outcome Breakdown</h3>
         <div className="flex items-center gap-4 h-[200px]">
-          <ResponsiveContainer width="55%" height="100%">
+          <ResponsiveContainer width="50%" height="100%">
             <PieChart>
               <Pie data={outcomeData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value" strokeWidth={0}>
                 {outcomeData.map((entry, i) => (
@@ -134,7 +144,37 @@ export default function Charts({ calls }: ChartsProps) {
         </div>
       </div>
 
-      {/* Disqualification breakdown */}
+      {/* Top right: Appointments / week */}
+      <div className={cardCls}>
+        <h3 className={sectionLabel}>Appointments / Week</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={weeklyData} margin={{ top: 4, right: 0, left: -24, bottom: 0 }} barCategoryGap="40%">
+            <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#4b5563' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+            <Bar dataKey="count" fill="#eab308" radius={[4, 4, 0, 0]} name="Appointments" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Bottom left: Objection breakdown */}
+      <div className={cardCls}>
+        <h3 className={sectionLabel}>Objection Breakdown</h3>
+        {objectionData.length === 0 ? (
+          <div className="h-[200px] flex items-center justify-center text-gray-600 text-sm">No objections logged yet</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={objectionData} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
+              <XAxis type="number" tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Bar dataKey="value" fill="#f97316" radius={[0, 4, 4, 0]} name="Count" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Bottom right: Disqualification reasons */}
       <div className={cardCls}>
         <h3 className={sectionLabel}>Disqualification Reasons</h3>
         {disqChartData.length === 0 ? (

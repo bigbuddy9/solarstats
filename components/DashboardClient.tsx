@@ -188,8 +188,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
             <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
             <StatsCard label="Confirmed Bookings" value={stats.confirmedBookings.toString()} />
             <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
-            <StatsCard label="Cash" value={stats.cashSales.toString()} sub={`${stats.cashPct}% of sales`} />
-            <StatsCard label="Finance" value={stats.financeSales.toString()} sub={`${100 - stats.cashPct}% of sales`} />
+            <StatsCard label="Cash / Finance" value={`${stats.cashSales} / ${stats.financeSales}`} sub={`${stats.cashPct}% cash · ${100 - stats.cashPct}% finance`} />
           </div>
         </div>
       </div>
