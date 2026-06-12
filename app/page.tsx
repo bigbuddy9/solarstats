@@ -13,6 +13,5 @@ export default async function Home() {
   const { data: profile } = await supabase
     .from('profiles').select('role').eq('id', session.user.id).single()
 
-  if (profile?.role === 'owner') redirect('/dashboard')
-  redirect('/log-call')
+  redirect('/dashboard')
 }

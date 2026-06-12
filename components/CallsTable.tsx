@@ -47,11 +47,9 @@ export default function CallsTable({ calls, isOwner, onDelete }: CallsTableProps
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this call log? This cannot be undone.')) return
-    setDeleting(id)
-    await supabase.from('calls').delete().eq('id', id)
-    setDeleting(null)
     setExpanded(null)
     onDelete?.(id)
+    supabase.from('calls').delete().eq('id', id)
   }
 
   const filtered = useMemo(() => {
