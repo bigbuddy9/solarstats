@@ -147,7 +147,7 @@ export default function Charts({ calls }: ChartsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Top left: Outcome breakdown */}
       <div className={cardCls}>
         <h3 className={sectionLabel}>Outcome Breakdown</h3>
