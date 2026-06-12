@@ -6,23 +6,63 @@ import {
 } from 'recharts'
 import type { Call, CallOutcome } from '@/lib/supabase'
 
-interface ChartsProps { calls: Call[] }
+type Period = 'today' | 'week' | 'month' | 'year' | 'all'
 
-function getWeekLabel(dateStr: string) {
-  const date = new Date(dateStr)
-  const start = new Date(date)
-  start.setDate(date.getDate() - date.getDay())
-  return start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
+interface ChartsProps { calls: Call[]; period: Period }
 
-function buildWeeklyData(calls: Call[]) {
+// --- Appointment chart: adapts grouping to selected period ---
+
+function buildAppointmentData(calls: Call[], period: Period) {
   const map = new Map<string, number>()
+
   calls.forEach(c => {
-    const week = getWeekLabel(c.appointment_date)
-    map.set(week, (map.get(week) ?? 0) + 1)
+    const date = new Date(c.appointment_date)
+    let key: string
+
+    if (period === 'today') {
+      const h = date.getHours()
+      const suffix = h >= 12 ? 'pm' : 'am'
+      key = `${h === 0 ? 12 : h > 12 ? h - 12 : h}${suffix}`
+    } else if (period === 'week') {
+      key = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    } else if (period === 'month') {
+      // Week starting Sunday
+      const start = new Date(date)
+      start.setDate(date.getDate() - date.getDay())
+      key = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    } else {
+      // year or all → per month
+      key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+    }
+
+    map.set(key, (map.get(key) ?? 0) + 1)
   })
-  return Array.from(map.entries()).map(([week, count]) => ({ week, count })).slice(-8)
+
+  const entries = Array.from(map.entries()).map(([label, count]) => ({ label, count }))
+
+  // For "today" sort by hour numerically
+  if (period === 'today') {
+    const hourOrder = (s: string) => {
+      const n = parseInt(s)
+      const pm = s.endsWith('pm')
+      if (n === 12) return pm ? 12 : 0
+      return pm ? n + 12 : n
+    }
+    entries.sort((a, b) => hourOrder(a.label) - hourOrder(b.label))
+  }
+
+  return period === 'all' ? entries : entries.slice(-12)
 }
+
+const PERIOD_LABELS: Record<Period, string> = {
+  today: 'Appointments / Hour',
+  week:  'Appointments / Day',
+  month: 'Appointments / Week',
+  year:  'Appointments / Month',
+  all:   'Appointments / Month',
+}
+
+// --- Outcome chart ---
 
 const OUTCOME_COLORS: Record<CallOutcome, string> = {
   'no-show':      '#374151',
@@ -40,6 +80,23 @@ const OUTCOME_LABELS: Record<CallOutcome, string> = {
   'closed':       'Closed',
 }
 
+function buildOutcomeData(calls: Call[]) {
+  const map = new Map<string, number>()
+  calls.forEach(c => map.set(c.outcome, (map.get(c.outcome) ?? 0) + 1))
+  return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
+}
+
+// --- Objection chart ---
+
+const OBJECTION_COLORS: Record<string, string> = {
+  'price':          '#ef4444',
+  'think-about-it': '#f97316',
+  'compare-market': '#eab308',
+  'authority':      '#a855f7',
+  'timing':         '#3b82f6',
+  'not-interested': '#6b7280',
+}
+
 const OBJECTION_LABELS: Record<string, string> = {
   'price':          'Price',
   'think-about-it': 'Think About It',
@@ -47,12 +104,6 @@ const OBJECTION_LABELS: Record<string, string> = {
   'authority':      'Authority',
   'timing':         'Timing',
   'not-interested': 'Not Interested',
-}
-
-function buildOutcomeData(calls: Call[]) {
-  const map = new Map<string, number>()
-  calls.forEach(c => map.set(c.outcome, (map.get(c.outcome) ?? 0) + 1))
-  return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
 }
 
 function buildObjectionData(calls: Call[]) {
@@ -64,18 +115,38 @@ function buildObjectionData(calls: Call[]) {
       if (reason) map.set(reason, (map.get(reason) ?? 0) + 1)
     })
   return Array.from(map.entries())
-    .map(([key, value]) => ({ name: OBJECTION_LABELS[key] ?? key, value }))
+    .map(([key, value]) => ({ key, name: OBJECTION_LABELS[key] ?? key, value, color: OBJECTION_COLORS[key] ?? '#6b7280' }))
     .sort((a, b) => b.value - a.value)
 }
+
+// --- Disq chart ---
+
+const DISQ_COLORS: Record<string, string> = {
+  'Bill Dnq':      '#f97316',
+  'Property Dnq':  '#ef4444',
+  'Finance Dnq':   '#a855f7',
+  'Other':         '#6b7280',
+}
+
+function buildDisqData(calls: Call[]) {
+  const map: Record<string, number> = {}
+  calls
+    .filter(c => c.outcome === 'disqualified' && c.disqualified_reason)
+    .forEach(c => {
+      const k = c.disqualified_reason.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      map[k] = (map[k] ?? 0) + 1
+    })
+  return Object.entries(map).map(([name, value]) => ({ name, value, color: DISQ_COLORS[name] ?? '#6b7280' }))
+}
+
+// --- Tooltips ---
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
     <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px' }}>
       {label && <p style={{ color: '#9ca3af', fontSize: 11, marginBottom: 4 }}>{label}</p>}
-      {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{p.value}</p>
-      ))}
+      <p style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{payload[0].value}</p>
     </div>
   )
 }
@@ -91,22 +162,36 @@ function PieTooltip({ active, payload }: any) {
   )
 }
 
+// --- Colored horizontal bar ---
+
+function ColoredBarChart({ data, emptyMsg }: { data: { name: string; value: number; color: string }[]; emptyMsg: string }) {
+  if (data.length === 0) {
+    return <div className="h-[200px] flex items-center justify-center text-gray-600 text-sm">{emptyMsg}</div>
+  }
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(160, data.length * 44)}>
+      <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
+        <XAxis type="number" tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
+        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} width={105} axisLine={false} tickLine={false} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+          {data.map((entry, i) => (
+            <Cell key={i} fill={entry.color} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
 const cardCls = "bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5"
 const sectionLabel = "text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-4"
 
-export default function Charts({ calls }: ChartsProps) {
-  const weeklyData = buildWeeklyData(calls)
+export default function Charts({ calls, period }: ChartsProps) {
+  const apptData    = buildAppointmentData(calls, period)
   const outcomeData = buildOutcomeData(calls)
-  const objectionData = buildObjectionData(calls)
-
-  const disqData = calls
-    .filter(c => c.outcome === 'disqualified' && c.disqualified_reason)
-    .reduce((acc, c) => {
-      const k = c.disqualified_reason.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      acc[k] = (acc[k] ?? 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-  const disqChartData = Object.entries(disqData).map(([name, value]) => ({ name, value }))
+  const objData     = buildObjectionData(calls)
+  const disqData    = buildDisqData(calls)
 
   if (calls.length === 0) {
     return (
@@ -144,15 +229,15 @@ export default function Charts({ calls }: ChartsProps) {
         </div>
       </div>
 
-      {/* Top right: Appointments / week */}
+      {/* Top right: Appointments (period-adaptive) */}
       <div className={cardCls}>
-        <h3 className={sectionLabel}>Appointments / Week</h3>
+        <h3 className={sectionLabel}>{PERIOD_LABELS[period]}</h3>
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={weeklyData} margin={{ top: 4, right: 0, left: -24, bottom: 0 }} barCategoryGap="40%">
-            <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#4b5563' }} axisLine={false} tickLine={false} />
+          <BarChart data={apptData} margin={{ top: 4, right: 0, left: -24, bottom: 0 }} barCategoryGap="40%">
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#4b5563' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-            <Bar dataKey="count" fill="#eab308" radius={[4, 4, 0, 0]} name="Appointments" />
+            <Bar dataKey="count" fill="#eab308" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -160,35 +245,13 @@ export default function Charts({ calls }: ChartsProps) {
       {/* Bottom left: Objection breakdown */}
       <div className={cardCls}>
         <h3 className={sectionLabel}>Objection Breakdown</h3>
-        {objectionData.length === 0 ? (
-          <div className="h-[200px] flex items-center justify-center text-gray-600 text-sm">No objections logged yet</div>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={objectionData} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
-              <XAxis type="number" tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="value" fill="#f97316" radius={[0, 4, 4, 0]} name="Count" />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+        <ColoredBarChart data={objData} emptyMsg="No objections logged yet" />
       </div>
 
       {/* Bottom right: Disqualification reasons */}
       <div className={cardCls}>
         <h3 className={sectionLabel}>Disqualification Reasons</h3>
-        {disqChartData.length === 0 ? (
-          <div className="h-[200px] flex items-center justify-center text-gray-600 text-sm">No disqualifications yet</div>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={disqChartData} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
-              <XAxis type="number" tick={{ fontSize: 10, fill: '#4b5563' }} allowDecimals={false} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} width={90} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} name="Count" />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+        <ColoredBarChart data={disqData} emptyMsg="No disqualifications yet" />
       </div>
     </div>
   )

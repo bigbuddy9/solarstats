@@ -219,7 +219,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
         </div>
       )}
 
-      <div className="mb-8"><Charts calls={filtered} /></div>
+      <div className="mb-8"><Charts calls={filtered} period={period} /></div>
       <CallsTable calls={filtered} isOwner={isOwner} onDelete={id => setCalls(prev => prev.filter(c => c.id !== id))} />
     </main>
   )
