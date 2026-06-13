@@ -208,8 +208,8 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
 
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-400" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand" />
             </span>
             Live
           </div>

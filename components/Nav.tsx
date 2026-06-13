@@ -53,7 +53,7 @@ export default function Nav({ settings, profile }: NavProps) {
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-500">{profile?.name}</span>
             {profile?.role === 'owner' && (
-              <span className="text-xs bg-yellow-400/20 text-yellow-400 px-2 py-0.5 rounded font-medium">Owner</span>
+              <span className="text-xs bg-white/10 text-brand px-2 py-0.5 rounded font-medium">Owner</span>
             )}
             <button
               onClick={handleSignOut}
