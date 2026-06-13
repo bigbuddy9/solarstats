@@ -38,6 +38,7 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
   const [businessName, setBusinessName] = useState(initial.business_name)
   const [colorTheme,   setColorTheme]   = useState(initial.color_theme || 'cyan-aurora')
   const [customTiers,  setCustomTiers]  = useState<[string,string,string,string,string]>(['#00FFFF','#38BDF8','#2563EB','#A78BFA','#7C3AED'])
+  const [primaryColor, setPrimaryColor] = useState(initial.brand_color || getTheme(initial.color_theme || 'cyan-aurora').tiers[0])
   const [logoUrl,      setLogoUrl]      = useState(initial.logo_url || '')
   const [showLb,       setShowLb]       = useState(initial.show_leaderboard_to_reps ?? false)
   const [uploading,    setUploading]    = useState(false)
@@ -96,14 +97,14 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
       .update({
         business_name: businessName,
         color_theme: colorTheme,
-        brand_color: tiers[0],
+        brand_color: primaryColor,
         logo_url: logoUrl,
         show_leaderboard_to_reps: showLb,
       })
       .eq('id', initial.id)
     if (err) { setError(err.message); setSaving(false); return }
     const root = document.documentElement
-    root.style.setProperty('--brand-color', tiers[0])
+    root.style.setProperty('--brand-color', primaryColor)
     tiers.forEach((c, i) => root.style.setProperty(`--tier-${i + 1}`, c))
     setSaving(false)
     setSaved(true)
@@ -192,49 +193,36 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
       </div>
 
       {/* Color Theme */}
-      <div>
-        <Label>Color Theme</Label>
-        <p className="text-xs text-gray-600 mb-4">Sets accent color and goal progress ring tiers.</p>
-
-        <div className="space-y-2 mb-4">
-          {/* Preset themes */}
-          {COLOR_THEMES.map(theme => {
-            const selected = colorTheme === theme.id
-            return (
-              <button
-                key={theme.id}
-                onClick={() => setColorTheme(theme.id)}
-                className={`w-full flex items-center gap-4 p-3 rounded-xl border transition-all text-left ${
-                  selected ? 'border-white/30 bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/10'
-                }`}
-              >
-                <div className="h-7 w-28 rounded-md flex-shrink-0 overflow-hidden flex">
-                  {theme.tiers.map((color, i) => (
-                    <div key={i} className="flex-1 h-full" style={{ backgroundColor: color }} />
-                  ))}
-                </div>
-                <p className={`flex-1 text-sm font-semibold ${selected ? 'text-white' : 'text-gray-400'}`}>{theme.name}</p>
-                {selected && <div className="h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
-              </button>
-            )
-          })}
-
-          {/* Custom theme option */}
-          <button
-            onClick={() => setColorTheme('custom')}
-            className={`w-full flex items-center gap-4 p-3 rounded-xl border transition-all text-left ${
-              colorTheme === 'custom' ? 'border-white/30 bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/10'
-            }`}
-          >
-            <div className="h-6 w-24 rounded-md flex-shrink-0 flex items-center justify-center border border-white/10 border-dashed">
-              <span className="text-gray-600 text-xs">Custom</span>
+      <div className="space-y-4">
+        <div>
+          <Label>Color Theme</Label>
+          {/* Dropdown */}
+          <div className="relative">
+            <select
+              value={colorTheme}
+              onChange={e => {
+                setColorTheme(e.target.value)
+                if (e.target.value !== 'custom') {
+                  setPrimaryColor(getTheme(e.target.value).tiers[0])
+                }
+              }}
+              className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-brand focus:outline-none pr-10"
+            >
+              {COLOR_THEMES.map(t => (
+                <option key={t.id} value={t.id} style={{ background: '#111' }}>{t.name}</option>
+              ))}
+              <option value="custom" style={{ background: '#111' }}>Custom</option>
+            </select>
+            {/* Swatch preview inside the dropdown trigger */}
+            <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 flex gap-0.5 overflow-hidden rounded">
+              {activeTiers.map((color, i) => (
+                <div key={i} className="h-4 w-4" style={{ backgroundColor: color }} />
+              ))}
             </div>
-            <div className="flex-1">
-              <p className={`text-sm font-semibold ${colorTheme === 'custom' ? 'text-white' : 'text-gray-300'}`}>Custom</p>
-              <p className="text-xs text-gray-600">Enter your own 5 hex codes</p>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            {colorTheme === 'custom' && <div className="h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
-          </button>
+          </div>
         </div>
 
         {/* Custom tier inputs */}
@@ -249,27 +237,38 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
                     const next = [...customTiers] as typeof customTiers
                     next[i] = e.target.value
                     setCustomTiers(next)
+                    if (i === 0) setPrimaryColor(e.target.value)
                   }}
                   placeholder="#000000"
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-brand focus:outline-none"
                 />
-                <span className="text-xs text-gray-600 w-32 shrink-0">{TIER_LABELS[i].split('—')[0].trim()}</span>
+                <span className="text-xs text-gray-600 w-16 shrink-0">{['T1','T2','T3','T4','T5'][i]}</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Live preview */}
-        <div className="mt-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Preview</p>
+        {/* Primary color */}
+        <div>
+          <Label>Primary Color</Label>
           <div className="flex items-center gap-3">
-            <div className="flex gap-2">
-              {activeTiers.map((color, i) => (
-                <div key={i} className="h-8 w-8 rounded-lg" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}66` }} />
-              ))}
-            </div>
-            <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${activeTiers.join(', ')})` }} />
+            <div className="h-10 w-10 rounded-lg flex-shrink-0 border border-white/10" style={{ backgroundColor: primaryColor }} />
+            <input
+              value={primaryColor}
+              onChange={e => setPrimaryColor(e.target.value)}
+              placeholder="#00FFFF"
+              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm font-mono focus:border-brand focus:outline-none placeholder-gray-700"
+            />
+            {primaryColor !== activeTiers[0] && (
+              <button
+                onClick={() => setPrimaryColor(activeTiers[0])}
+                className="text-xs text-gray-600 hover:text-white transition-colors whitespace-nowrap"
+              >
+                Reset
+              </button>
+            )}
           </div>
+          <p className="text-xs text-gray-600 mt-1.5">Used for nav accent, buttons, and live indicator. Defaults to the theme's top tier.</p>
         </div>
       </div>
 

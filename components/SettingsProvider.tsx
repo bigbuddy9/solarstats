@@ -11,9 +11,9 @@ export function useSettings() {
 }
 
 function applyTheme(settings: Settings) {
-  const theme = getTheme(settings.color_theme || 'traffic-light')
+  const theme = getTheme(settings.color_theme || 'cyan-aurora')
   const root = document.documentElement
-  root.style.setProperty('--brand-color', theme.tiers[0])
+  root.style.setProperty('--brand-color', settings.brand_color || theme.tiers[0])
   root.style.setProperty('--tier-1', theme.tiers[0])
   root.style.setProperty('--tier-2', theme.tiers[1])
   root.style.setProperty('--tier-3', theme.tiers[2])
