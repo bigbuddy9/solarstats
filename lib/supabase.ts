@@ -43,4 +43,5 @@ export interface Settings {
   logo_url: string
   brand_color: string
   subdomain: string
+  show_leaderboard_to_reps: boolean
 }

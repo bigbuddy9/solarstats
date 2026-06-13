@@ -250,7 +250,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
         </div>
       </div>
 
-      {isOwner && selectedRep === 'all' && reps.length > 1 && (
+      {(isOwner || settings?.show_leaderboard_to_reps) && selectedRep === 'all' && reps.length > 1 && (
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 mb-8">
           <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-5">Leaderboard</h3>
           <div className="space-y-2">

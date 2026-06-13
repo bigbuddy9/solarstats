@@ -34,13 +34,20 @@ export default function Nav({ settings, profile }: NavProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-brand mr-3" />
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt={settings.business_name} className="h-6 w-auto mr-3 object-contain" />
+            ) : (
+              <div className="h-2 w-2 rounded-full bg-brand mr-3" />
+            )}
             <Link href="/log-call" className={linkCls('/log-call')}>Log Call</Link>
             <Link href="/dashboard" className={linkCls('/dashboard')}>
               {profile?.role === 'owner' ? `${bizName} Dashboard` : `${bizName} Stats`}
             </Link>
             {profile?.role === 'owner' && (
               <Link href="/team" className={linkCls('/team')}>Team</Link>
+            )}
+            {profile?.role === 'owner' && (
+              <Link href="/settings" className={linkCls('/settings')}>Settings</Link>
             )}
           </div>
           <div className="flex items-center gap-3">
