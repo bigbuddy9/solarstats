@@ -54,6 +54,7 @@ function getWindow(period: Period, offset: number): { start: Date | null; end: D
 
 function computeStats(calls: Call[]) {
   const confirmedBookings = calls.length
+  const noShows = calls.filter(c => c.outcome === 'no-show').length
   const meetingsSat = calls.filter(c => c.outcome !== 'no-show').length
   const closes = calls.filter(c => c.outcome === 'closed')
   const sameWeekSales = closes.filter(c => c.sale_type === 'same-week').length
@@ -75,7 +76,7 @@ function computeStats(calls: Call[]) {
   const avgBatteryKw = totalSales > 0 ? totalBatteryKw / totalSales : 0
 
   return {
-    confirmedBookings, meetingsSat, satRate, closeRate,
+    confirmedBookings, noShows, meetingsSat, satRate, closeRate,
     sameWeekSales, followUpSales, totalSales,
     totalSolarKw, avgSolarKw, totalBatteryKw, avgBatteryKw,
     totalRevenue, avgRevenue, cashSales, financeSales, cashPct,
@@ -239,8 +240,8 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
           <StatsCard label="Total Sales"  value={stats.totalSales.toString()} accent="yellow" {...ring('total_sales', stats.totalSales)} />
           <StatsCard label="Revenue"      value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} accent="green" {...ring('revenue', stats.totalRevenue)} />
           <StatsCard label="Avg Revenue"  value={stats.avgRevenue > 0 ? `$${Math.round(stats.avgRevenue).toLocaleString()}` : '$0'} accent="green" {...ring('avg_revenue', stats.avgRevenue)} />
-          <StatsCard label="Sat Rate"     value={`${stats.satRate}%`}   {...ring('sat_rate', stats.satRate)} />
           <StatsCard label="Close Rate"   value={`${stats.closeRate}%`} {...ring('close_rate', stats.closeRate)} />
+          <StatsCard label="Sat Rate"     value={`${stats.satRate}%`}   {...ring('sat_rate', stats.satRate)} />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <StatsCard label="Appointments"     value={stats.confirmedBookings.toString()} {...ring('appointments', stats.confirmedBookings)} />
@@ -254,10 +255,11 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
       {/* Supporting stats — compact, no goals */}
       <div className="mb-10">
         <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Stats</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-start">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-start">
           <StatsCard label="One Call Closes"  value={stats.sameWeekSales.toString()} accent="yellow" />
           <StatsCard label="Follow Up Sales"  value={stats.followUpSales.toString()} accent="yellow" />
           <StatsCard label="Meetings Sat"     value={stats.meetingsSat.toString()} />
+          <StatsCard label="No Shows"         value={stats.noShows.toString()} />
           <StatsCard label="Cash / Finance"   value={`${stats.cashSales} / ${stats.financeSales}`} />
         </div>
       </div>
