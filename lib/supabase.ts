@@ -48,8 +48,8 @@ export interface Settings {
 }
 
 export type GoalMetric =
-  | 'total_sales' | 'revenue' | 'sat_rate' | 'close_rate'
-  | 'appointments' | 'total_solar_kw' | 'total_battery_kw'
+  | 'total_sales' | 'revenue' | 'avg_revenue' | 'sat_rate' | 'close_rate'
+  | 'appointments' | 'total_solar_kw' | 'avg_solar_kw' | 'total_battery_kw' | 'avg_battery_kw'
 
 export interface Goal {
   id: string

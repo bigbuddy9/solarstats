@@ -6,13 +6,16 @@ import type { Settings, Goal, GoalMetric, Profile } from '@/lib/supabase'
 import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
 
 const GOAL_METRICS: { metric: GoalMetric; label: string }[] = [
-  { metric: 'total_sales',      label: 'Total Sales'       },
-  { metric: 'revenue',          label: 'Revenue ($)'       },
-  { metric: 'sat_rate',         label: 'Sat Rate (%)'      },
-  { metric: 'close_rate',       label: 'Close Rate (%)'    },
-  { metric: 'appointments',     label: 'Appointments'      },
-  { metric: 'total_solar_kw',   label: 'Total Solar kW'    },
-  { metric: 'total_battery_kw', label: 'Total Battery kW'  },
+  { metric: 'total_sales',      label: 'Total Sales'        },
+  { metric: 'revenue',          label: 'Revenue ($)'        },
+  { metric: 'avg_revenue',      label: 'Avg Revenue ($)'    },
+  { metric: 'sat_rate',         label: 'Sat Rate (%)'       },
+  { metric: 'close_rate',       label: 'Close Rate (%)'     },
+  { metric: 'appointments',     label: 'Appointments'       },
+  { metric: 'total_solar_kw',   label: 'Total Solar kW'     },
+  { metric: 'avg_solar_kw',     label: 'Avg Solar kW'       },
+  { metric: 'total_battery_kw', label: 'Total Battery kW'   },
+  { metric: 'avg_battery_kw',   label: 'Avg Battery kW'     },
 ]
 
 const TIER_LABELS = ['Tier 1 — Crushing It (90–100%)', 'Tier 2 — Strong (70–89%)', 'Tier 3 — On Track (50–69%)', 'Tier 4 — Needs Work (30–49%)', 'Tier 5 — Struggling (0–29%)']

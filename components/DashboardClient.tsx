@@ -64,6 +64,7 @@ function computeStats(calls: Call[]) {
   const closeRate = meetingsSat > 0 ? Math.round((totalSales / meetingsSat) * 100) : 0
 
   const totalRevenue = closes.reduce((sum, c) => sum + (parseFloat(c.deal_value) || 0), 0)
+  const avgRevenue = totalSales > 0 ? totalRevenue / totalSales : 0
   const cashSales = closes.filter(c => c.payment_type === 'cash').length
   const financeSales = closes.filter(c => c.payment_type === 'finance').length
   const cashPct = totalSales > 0 ? Math.round((cashSales / totalSales) * 100) : 0
@@ -77,7 +78,7 @@ function computeStats(calls: Call[]) {
     confirmedBookings, meetingsSat, satRate, closeRate,
     sameWeekSales, followUpSales, totalSales,
     totalSolarKw, avgSolarKw, totalBatteryKw, avgBatteryKw,
-    totalRevenue, cashSales, financeSales, cashPct,
+    totalRevenue, avgRevenue, cashSales, financeSales, cashPct,
   }
 }
 
@@ -234,28 +235,29 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
       {/* Goal cards — top, with progress rings */}
       <div className="mb-6">
         <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Goals</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
           <StatsCard label="Total Sales"  value={stats.totalSales.toString()} accent="yellow" {...ring('total_sales', stats.totalSales)} />
           <StatsCard label="Revenue"      value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} accent="green" {...ring('revenue', stats.totalRevenue)} />
+          <StatsCard label="Avg Revenue"  value={stats.avgRevenue > 0 ? `$${Math.round(stats.avgRevenue).toLocaleString()}` : '$0'} accent="green" {...ring('avg_revenue', stats.avgRevenue)} />
           <StatsCard label="Sat Rate"     value={`${stats.satRate}%`}   {...ring('sat_rate', stats.satRate)} />
           <StatsCard label="Close Rate"   value={`${stats.closeRate}%`} {...ring('close_rate', stats.closeRate)} />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <StatsCard label="Appointments"     value={stats.confirmedBookings.toString()} {...ring('appointments', stats.confirmedBookings)} />
           <StatsCard label="Total Solar kW"   value={stats.totalSolarKw > 0 ? stats.totalSolarKw.toFixed(2) : '—'} {...ring('total_solar_kw', stats.totalSolarKw)} />
+          <StatsCard label="Avg Solar kW"     value={stats.avgSolarKw > 0 ? stats.avgSolarKw.toFixed(2) : '—'}    {...ring('avg_solar_kw', stats.avgSolarKw)} />
           <StatsCard label="Total Battery kW" value={stats.totalBatteryKw > 0 ? stats.totalBatteryKw.toFixed(1) : '—'} {...ring('total_battery_kw', stats.totalBatteryKw)} />
+          <StatsCard label="Avg Battery kW"   value={stats.avgBatteryKw > 0 ? stats.avgBatteryKw.toFixed(1) : '—'}    {...ring('avg_battery_kw', stats.avgBatteryKw)} />
         </div>
       </div>
 
       {/* Supporting stats — compact, no goals */}
       <div className="mb-10">
         <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Stats</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-start">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-start">
           <StatsCard label="One Call Closes"  value={stats.sameWeekSales.toString()} accent="yellow" />
           <StatsCard label="Follow Up Sales"  value={stats.followUpSales.toString()} accent="yellow" />
           <StatsCard label="Meetings Sat"     value={stats.meetingsSat.toString()} />
-          <StatsCard label="Avg Solar kW"     value={stats.avgSolarKw > 0 ? stats.avgSolarKw.toFixed(2) : '—'} />
-          <StatsCard label="Avg Battery kW"   value={stats.avgBatteryKw > 0 ? stats.avgBatteryKw.toFixed(1) : '—'} />
           <StatsCard label="Cash / Finance"   value={`${stats.cashSales} / ${stats.financeSales}`} />
         </div>
       </div>
