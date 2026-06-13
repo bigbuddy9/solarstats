@@ -5,18 +5,28 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Settings, Goal, GoalMetric, Profile } from '@/lib/supabase'
 import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
 
-const GOAL_METRICS: { metric: GoalMetric; label: string }[] = [
-  { metric: 'total_sales',      label: 'Total Sales'        },
-  { metric: 'revenue',          label: 'Revenue ($)'        },
-  { metric: 'avg_revenue',      label: 'Avg Revenue ($)'    },
-  { metric: 'sat_rate',         label: 'Sat Rate (%)'       },
-  { metric: 'close_rate',       label: 'Close Rate (%)'     },
-  { metric: 'appointments',     label: 'Appointments'       },
-  { metric: 'total_solar_kw',   label: 'Total Solar kW'     },
-  { metric: 'avg_solar_kw',     label: 'Avg Solar kW'       },
-  { metric: 'total_battery_kw', label: 'Total Battery kW'   },
-  { metric: 'avg_battery_kw',   label: 'Avg Battery kW'     },
+// Metrics the owner types in manually
+const MANUAL_METRICS: { metric: GoalMetric; label: string }[] = [
+  { metric: 'total_sales',      label: 'Total Sales'      },
+  { metric: 'revenue',          label: 'Revenue ($)'      },
+  { metric: 'sat_rate',         label: 'Sat Rate (%)'     },
+  { metric: 'close_rate',       label: 'Close Rate (%)'   },
+  { metric: 'appointments',     label: 'Appointments'     },
+  { metric: 'total_solar_kw',   label: 'Total Solar kW'   },
+  { metric: 'total_battery_kw', label: 'Total Battery kW' },
 ]
+
+function calcAverages(goals: Record<GoalMetric, string>): Partial<Record<GoalMetric, number>> {
+  const sales = parseFloat(goals['total_sales'])
+  const revenue = parseFloat(goals['revenue'])
+  const solar = parseFloat(goals['total_solar_kw'])
+  const battery = parseFloat(goals['total_battery_kw'])
+  return {
+    avg_revenue:      sales > 0 && revenue > 0  ? Math.round(revenue / sales)            : undefined,
+    avg_solar_kw:     sales > 0 && solar > 0    ? Math.round((solar / sales) * 100) / 100 : undefined,
+    avg_battery_kw:   sales > 0 && battery > 0  ? Math.round((battery / sales) * 100) / 100 : undefined,
+  }
+}
 
 const TIER_LABELS = ['Tier 1 — Crushing It (90–100%)', 'Tier 2 — Strong (70–89%)', 'Tier 3 — On Track (50–69%)', 'Tier 4 — Needs Work (30–49%)', 'Tier 5 — Struggling (0–29%)']
 
@@ -129,7 +139,7 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
 
   const [teamGoals, setTeamGoals] = useState<Record<GoalMetric, string>>(() => {
     const init = {} as Record<GoalMetric, string>
-    GOAL_METRICS.forEach(({ metric }) => {
+    MANUAL_METRICS.forEach(({ metric }) => {
       const found = initialGoals.find(g => g.metric === metric && g.rep_id === null)
       init[metric] = found ? String(found.target) : ''
     })
@@ -140,7 +150,7 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
     const init: Record<string, Record<GoalMetric, string>> = {}
     reps.forEach(rep => {
       init[rep.id] = {} as Record<GoalMetric, string>
-      GOAL_METRICS.forEach(({ metric }) => {
+      MANUAL_METRICS.forEach(({ metric }) => {
         const found = initialGoals.find(g => g.metric === metric && g.rep_id === rep.id)
         init[rep.id][metric] = found ? String(found.target) : ''
       })
@@ -196,23 +206,19 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
     setSavingGoals(true)
     setError('')
 
-    const teamUpserts = GOAL_METRICS
-      .filter(({ metric }) => teamGoals[metric] !== '')
-      .map(({ metric }) => ({
-        metric,
-        target: parseFloat(teamGoals[metric]) || 0,
-        rep_id: null as string | null,
-      }))
+    function buildUpserts(goals: Record<GoalMetric, string>, repId: string | null) {
+      const manual = MANUAL_METRICS
+        .filter(({ metric }) => goals[metric] !== '' && goals[metric] !== undefined)
+        .map(({ metric }) => ({ metric, target: parseFloat(goals[metric]) || 0, rep_id: repId }))
+      const avgs = calcAverages(goals)
+      const auto = (Object.entries(avgs) as [GoalMetric, number | undefined][])
+        .filter(([, v]) => v !== undefined)
+        .map(([metric, target]) => ({ metric, target: target!, rep_id: repId }))
+      return [...manual, ...auto]
+    }
 
-    const repUpserts = reps.flatMap(rep =>
-      GOAL_METRICS
-        .filter(({ metric }) => repGoals[rep.id]?.[metric] !== '')
-        .map(({ metric }) => ({
-          metric,
-          target: parseFloat(repGoals[rep.id]?.[metric] ?? '0') || 0,
-          rep_id: rep.id as string | null,
-        }))
-    )
+    const teamUpserts = buildUpserts(teamGoals, null)
+    const repUpserts = reps.flatMap(rep => buildUpserts(repGoals[rep.id] ?? {} as Record<GoalMetric, string>, rep.id))
 
     const { error: err } = await supabase
       .from('goals')
@@ -374,18 +380,34 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Team</p>
           <div className="space-y-3">
-            {GOAL_METRICS.map(({ metric, label }) => (
+            {MANUAL_METRICS.map(({ metric, label }) => (
               <div key={metric} className="flex items-center gap-4">
                 <label className="text-sm text-gray-300 w-40 shrink-0">{label}</label>
                 <input
                   type="number" min="0"
-                  value={teamGoals[metric]}
+                  value={teamGoals[metric] ?? ''}
                   onChange={e => setTeamGoals(prev => ({ ...prev, [metric]: e.target.value }))}
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none"
                 />
               </div>
             ))}
           </div>
+          {/* Auto-calculated averages preview */}
+          {(() => {
+            const avgs = calcAverages(teamGoals)
+            const labels: Partial<Record<GoalMetric, string>> = { avg_revenue: 'Avg Revenue', avg_solar_kw: 'Avg Solar kW', avg_battery_kw: 'Avg Battery kW' }
+            const entries = (Object.entries(avgs) as [GoalMetric, number | undefined][]).filter(([, v]) => v !== undefined)
+            if (!entries.length) return null
+            return (
+              <div className="mt-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] flex flex-wrap gap-x-6 gap-y-1">
+                {entries.map(([metric, val]) => (
+                  <span key={metric} className="text-xs text-gray-500">
+                    <span className="text-gray-600">{labels[metric]}:</span> <span className="text-gray-300 font-medium">{metric === 'avg_revenue' ? `$${val!.toLocaleString()}` : val}</span> <span className="text-gray-700">auto</span>
+                  </span>
+                ))}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Per-rep goals */}
@@ -395,27 +417,41 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
             <p className="text-sm text-gray-600">No reps on the team yet. Add reps and their goals will appear here.</p>
           ) : (
             <div className="space-y-6">
-              {reps.map(rep => (
-                <div key={rep.id}>
-                  <p className="text-sm font-semibold text-white mb-2">{rep.name}</p>
-                  <div className="space-y-2">
-                    {GOAL_METRICS.map(({ metric, label }) => (
-                      <div key={metric} className="flex items-center gap-4">
-                        <label className="text-sm text-gray-500 w-40 shrink-0">{label}</label>
-                        <input
-                          type="number" min="0"
-                          value={repGoals[rep.id]?.[metric] ?? ''}
-                          onChange={e => setRepGoals(prev => ({
-                            ...prev,
-                            [rep.id]: { ...prev[rep.id], [metric]: e.target.value }
-                          }))}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none"
-                        />
+              {reps.map(rep => {
+                const avgs = calcAverages(repGoals[rep.id] ?? {} as Record<GoalMetric, string>)
+                const avgLabels: Partial<Record<GoalMetric, string>> = { avg_revenue: 'Avg Revenue', avg_solar_kw: 'Avg Solar kW', avg_battery_kw: 'Avg Battery kW' }
+                const avgEntries = (Object.entries(avgs) as [GoalMetric, number | undefined][]).filter(([, v]) => v !== undefined)
+                return (
+                  <div key={rep.id}>
+                    <p className="text-sm font-semibold text-white mb-2">{rep.name}</p>
+                    <div className="space-y-2">
+                      {MANUAL_METRICS.map(({ metric, label }) => (
+                        <div key={metric} className="flex items-center gap-4">
+                          <label className="text-sm text-gray-500 w-40 shrink-0">{label}</label>
+                          <input
+                            type="number" min="0"
+                            value={repGoals[rep.id]?.[metric] ?? ''}
+                            onChange={e => setRepGoals(prev => ({
+                              ...prev,
+                              [rep.id]: { ...prev[rep.id], [metric]: e.target.value }
+                            }))}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    {avgEntries.length > 0 && (
+                      <div className="mt-2 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04] flex flex-wrap gap-x-6 gap-y-1">
+                        {avgEntries.map(([metric, val]) => (
+                          <span key={metric} className="text-xs text-gray-500">
+                            <span className="text-gray-600">{avgLabels[metric]}:</span> <span className="text-gray-300 font-medium">{metric === 'avg_revenue' ? `$${val!.toLocaleString()}` : val}</span> <span className="text-gray-700">auto</span>
+                          </span>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
