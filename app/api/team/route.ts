@@ -30,6 +30,13 @@ export async function POST(req: Request) {
 
   if (createError) return NextResponse.json({ error: createError.message }, { status: 400 })
 
+  // Explicitly upsert profile in case the trigger doesn't fire
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .upsert({ id: newUser.user.id, name, role: role ?? 'rep' }, { onConflict: 'id' })
+
+  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 400 })
+
   return NextResponse.json({ id: newUser.user.id })
 }
 

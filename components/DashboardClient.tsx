@@ -238,9 +238,9 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
       <div className="mb-6">
         <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Goals</p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
-          <StatsCard label="Total Sales"  value={stats.totalSales.toString()} accent="yellow" {...ring('total_sales', stats.totalSales)} />
-          <StatsCard label="Revenue"      value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} accent="green" {...ring('revenue', stats.totalRevenue)} />
-          <StatsCard label="Avg Revenue"  value={stats.avgRevenue > 0 ? `$${Math.round(stats.avgRevenue).toLocaleString()}` : '$0'} accent="green" {...ring('avg_revenue', stats.avgRevenue)} />
+          <StatsCard label="Total Sales"  value={stats.totalSales.toString()} {...ring('total_sales', stats.totalSales)} />
+          <StatsCard label="Revenue"      value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} {...ring('revenue', stats.totalRevenue)} />
+          <StatsCard label="Avg Revenue"  value={stats.avgRevenue > 0 ? `$${Math.round(stats.avgRevenue).toLocaleString()}` : '$0'} {...ring('avg_revenue', stats.avgRevenue)} />
           <StatsCard label="Close Rate"   value={`${stats.closeRate}%`} {...ring('close_rate', stats.closeRate)} />
           <StatsCard label="Sat Rate"     value={`${stats.satRate}%`}   {...ring('sat_rate', stats.satRate)} />
         </div>
