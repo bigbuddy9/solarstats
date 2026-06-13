@@ -6,13 +6,13 @@ import type { Settings, Goal, GoalMetric, Profile } from '@/lib/supabase'
 import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
 
 const GOAL_METRICS: { metric: GoalMetric; label: string; placeholder: string }[] = [
-  { metric: 'total_sales',      label: 'Total Sales',       placeholder: '20' },
-  { metric: 'revenue',          label: 'Revenue ($)',        placeholder: '100000' },
-  { metric: 'appointments',     label: 'Appointments',       placeholder: '40' },
-  { metric: 'sat_rate',         label: 'Sat Rate (%)',       placeholder: '80' },
-  { metric: 'close_rate',       label: 'Close Rate (%)',     placeholder: '50' },
-  { metric: 'same_week_sales',  label: 'One Call Closes',    placeholder: '10' },
-  { metric: 'follow_up_sales',  label: 'Follow Up Sales',    placeholder: '10' },
+  { metric: 'total_sales',      label: 'Total Sales',       placeholder: '' },
+  { metric: 'revenue',          label: 'Revenue ($)',        placeholder: '' },
+  { metric: 'appointments',     label: 'Appointments',       placeholder: '' },
+  { metric: 'sat_rate',         label: 'Sat Rate (%)',       placeholder: '' },
+  { metric: 'close_rate',       label: 'Close Rate (%)',     placeholder: '' },
+  { metric: 'same_week_sales',  label: 'One Call Closes',    placeholder: '' },
+  { metric: 'follow_up_sales',  label: 'Follow Up Sales',    placeholder: '' },
 ]
 
 const TIER_LABELS = ['Tier 1 — Crushing It (90–100%)', 'Tier 2 — Strong (70–89%)', 'Tier 3 — On Track (50–69%)', 'Tier 4 — Needs Work (30–49%)', 'Tier 5 — Struggling (0–29%)']
@@ -330,15 +330,17 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
         </div>
 
         {/* Per-rep goals */}
-        {reps.length > 0 && (
-          <div>
-            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Per Rep</p>
+        <div>
+          <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Per Rep</p>
+          {reps.length === 0 ? (
+            <p className="text-sm text-gray-600">No reps on the team yet. Add reps and their goals will appear here.</p>
+          ) : (
             <div className="space-y-6">
               {reps.map(rep => (
                 <div key={rep.id}>
                   <p className="text-sm font-semibold text-white mb-2">{rep.name}</p>
                   <div className="space-y-2">
-                    {GOAL_METRICS.map(({ metric, label, placeholder }) => (
+                    {GOAL_METRICS.map(({ metric, label }) => (
                       <div key={metric} className="flex items-center gap-4">
                         <label className="text-sm text-gray-500 w-40 shrink-0">{label}</label>
                         <input
@@ -348,8 +350,7 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
                             ...prev,
                             [rep.id]: { ...prev[rep.id], [metric]: e.target.value }
                           }))}
-                          placeholder={placeholder}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none placeholder-gray-700"
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none"
                         />
                       </div>
                     ))}
@@ -357,8 +358,8 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <button
           onClick={handleSaveGoals}
