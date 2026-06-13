@@ -22,7 +22,7 @@ function Ring({ pct, color, size }: { pct: number; color: string; size: number }
         stroke={color} strokeWidth={stroke}
         strokeDasharray={`${filled} ${circ}`}
         strokeLinecap="round"
-        style={{ filter: `drop-shadow(0 0 5px ${color}99)`, transition: 'stroke-dasharray 0.6s ease' }}
+        style={{ transition: 'stroke-dasharray 0.6s ease' }}
       />
     </svg>
   )
