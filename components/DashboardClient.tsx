@@ -55,6 +55,7 @@ function getWindow(period: Period, offset: number): { start: Date | null; end: D
 function computeStats(calls: Call[]) {
   const confirmedBookings = calls.length
   const noShows = calls.filter(c => c.outcome === 'no-show').length
+  const disqualified = calls.filter(c => c.outcome === 'disqualified').length
   const meetingsSat = calls.filter(c => c.outcome !== 'no-show').length
   const closes = calls.filter(c => c.outcome === 'closed')
   const sameWeekSales = closes.filter(c => c.sale_type === 'same-week').length
@@ -76,7 +77,7 @@ function computeStats(calls: Call[]) {
   const avgBatteryKw = totalSales > 0 ? totalBatteryKw / totalSales : 0
 
   return {
-    confirmedBookings, noShows, meetingsSat, satRate, closeRate,
+    confirmedBookings, noShows, disqualified, meetingsSat, satRate, closeRate,
     sameWeekSales, followUpSales, totalSales,
     totalSolarKw, avgSolarKw, totalBatteryKw, avgBatteryKw,
     totalRevenue, avgRevenue, cashSales, financeSales, cashPct,
@@ -259,7 +260,7 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
           <StatsCard label="One Call Closes"  value={stats.sameWeekSales.toString()} accent="yellow" />
           <StatsCard label="Follow Up Sales"  value={stats.followUpSales.toString()} accent="yellow" />
           <StatsCard label="Meetings Sat"     value={stats.meetingsSat.toString()} />
-          <StatsCard label="No Shows"         value={stats.noShows.toString()} />
+          <StatsCard label="No Show / DNQ"    value={`${stats.noShows} / ${stats.disqualified}`} />
           <StatsCard label="Cash / Finance"   value={`${stats.cashSales} / ${stats.financeSales}`} />
         </div>
       </div>
