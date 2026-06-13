@@ -185,16 +185,12 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
                   selected ? 'border-white/30 bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/10'
                 }`}
               >
-                <div className="h-6 w-24 rounded-md flex-shrink-0" style={{ background: `linear-gradient(90deg, ${theme.tiers.join(', ')})` }} />
-                <div className="flex gap-1.5 flex-shrink-0">
+                <div className="h-7 w-28 rounded-md flex-shrink-0 overflow-hidden flex">
                   {theme.tiers.map((color, i) => (
-                    <div key={i} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}88` }} />
+                    <div key={i} className="flex-1 h-full" style={{ backgroundColor: color }} />
                   ))}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${selected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</p>
-                  <p className="text-xs text-gray-600 truncate">{theme.desc}</p>
-                </div>
+                <p className={`flex-1 text-sm font-semibold ${selected ? 'text-white' : 'text-gray-400'}`}>{theme.name}</p>
                 {selected && <div className="h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
               </button>
             )
@@ -243,14 +239,13 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
         {/* Live preview */}
         <div className="mt-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
           <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Preview</p>
-          <div className="flex items-center gap-3 flex-wrap">
-            {activeTiers.map((color, i) => (
-              <div key={i} className="flex flex-col items-center gap-1.5">
-                <div className="h-8 w-8 rounded-lg" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}66` }} />
-                <span className="text-[9px] text-gray-600">{[90,70,50,30,10][i]}%+</span>
-              </div>
-            ))}
-            <div className="flex-1 h-2 rounded-full ml-2" style={{ background: `linear-gradient(90deg, ${activeTiers.join(', ')})` }} />
+          <div className="flex items-center gap-3">
+            <div className="flex gap-2">
+              {activeTiers.map((color, i) => (
+                <div key={i} className="h-8 w-8 rounded-lg" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}66` }} />
+              ))}
+            </div>
+            <div className="flex-1 h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${activeTiers.join(', ')})` }} />
           </div>
         </div>
       </div>
