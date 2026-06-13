@@ -49,7 +49,7 @@ export interface Settings {
 
 export type GoalMetric =
   | 'total_sales' | 'revenue' | 'sat_rate' | 'close_rate'
-  | 'appointments' | 'same_week_sales' | 'follow_up_sales'
+  | 'appointments' | 'total_solar_kw' | 'total_battery_kw'
 
 export interface Goal {
   id: string

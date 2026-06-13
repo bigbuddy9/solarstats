@@ -5,14 +5,14 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Settings, Goal, GoalMetric, Profile } from '@/lib/supabase'
 import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
 
-const GOAL_METRICS: { metric: GoalMetric; label: string; placeholder: string }[] = [
-  { metric: 'total_sales',      label: 'Total Sales',       placeholder: '' },
-  { metric: 'revenue',          label: 'Revenue ($)',        placeholder: '' },
-  { metric: 'appointments',     label: 'Appointments',       placeholder: '' },
-  { metric: 'sat_rate',         label: 'Sat Rate (%)',       placeholder: '' },
-  { metric: 'close_rate',       label: 'Close Rate (%)',     placeholder: '' },
-  { metric: 'same_week_sales',  label: 'One Call Closes',    placeholder: '' },
-  { metric: 'follow_up_sales',  label: 'Follow Up Sales',    placeholder: '' },
+const GOAL_METRICS: { metric: GoalMetric; label: string }[] = [
+  { metric: 'total_sales',      label: 'Total Sales'       },
+  { metric: 'revenue',          label: 'Revenue ($)'       },
+  { metric: 'sat_rate',         label: 'Sat Rate (%)'      },
+  { metric: 'close_rate',       label: 'Close Rate (%)'    },
+  { metric: 'appointments',     label: 'Appointments'      },
+  { metric: 'total_solar_kw',   label: 'Total Solar kW'    },
+  { metric: 'total_battery_kw', label: 'Total Battery kW'  },
 ]
 
 const TIER_LABELS = ['Tier 1 — Crushing It (90–100%)', 'Tier 2 — Strong (70–89%)', 'Tier 3 — On Track (50–69%)', 'Tier 4 — Needs Work (30–49%)', 'Tier 5 — Struggling (0–29%)']
@@ -371,15 +371,14 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Team</p>
           <div className="space-y-3">
-            {GOAL_METRICS.map(({ metric, label, placeholder }) => (
+            {GOAL_METRICS.map(({ metric, label }) => (
               <div key={metric} className="flex items-center gap-4">
                 <label className="text-sm text-gray-300 w-40 shrink-0">{label}</label>
                 <input
                   type="number" min="0"
                   value={teamGoals[metric]}
                   onChange={e => setTeamGoals(prev => ({ ...prev, [metric]: e.target.value }))}
-                  placeholder={placeholder}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none placeholder-gray-700"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none"
                 />
               </div>
             ))}
