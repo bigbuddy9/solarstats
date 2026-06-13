@@ -3,7 +3,9 @@
 import { useState, useRef } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Settings } from '@/lib/supabase'
-import { COLOR_THEMES, getTheme } from '@/lib/themes'
+import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
+
+const TIER_LABELS = ['Tier 1 — Crushing It (90–100%)', 'Tier 2 — Strong (70–89%)', 'Tier 3 — On Track (50–69%)', 'Tier 4 — Needs Work (30–49%)', 'Tier 5 — Struggling (0–29%)']
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -24,13 +26,19 @@ export default function SettingsClient({ settings: initial }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [businessName, setBusinessName] = useState(initial.business_name)
-  const [colorTheme,   setColorTheme]   = useState(initial.color_theme || 'traffic-light')
+  const [colorTheme,   setColorTheme]   = useState(initial.color_theme || 'cyan-aurora')
+  const [customTiers,  setCustomTiers]  = useState<[string,string,string,string,string]>(['#00FFFF','#38BDF8','#2563EB','#A78BFA','#7C3AED'])
   const [logoUrl,      setLogoUrl]      = useState(initial.logo_url || '')
   const [showLb,       setShowLb]       = useState(initial.show_leaderboard_to_reps ?? false)
   const [uploading,    setUploading]    = useState(false)
   const [saving,       setSaving]       = useState(false)
   const [saved,        setSaved]        = useState(false)
   const [error,        setError]        = useState('')
+
+  function getActiveTiers(): ColorTheme['tiers'] {
+    if (colorTheme === 'custom') return customTiers
+    return getTheme(colorTheme).tiers
+  }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -49,30 +57,27 @@ export default function SettingsClient({ settings: initial }: Props) {
   async function handleSave() {
     setSaving(true)
     setError('')
-    const theme = getTheme(colorTheme)
+    const tiers = getActiveTiers()
     const { error: err } = await supabase
       .from('settings')
       .update({
         business_name: businessName,
         color_theme: colorTheme,
-        brand_color: theme.tiers[0],
+        brand_color: tiers[0],
         logo_url: logoUrl,
         show_leaderboard_to_reps: showLb,
       })
       .eq('id', initial.id)
     if (err) { setError(err.message); setSaving(false); return }
-    // Apply theme live
     const root = document.documentElement
-    root.style.setProperty('--brand-color', theme.tiers[0])
-    root.style.setProperty('--tier-1', theme.tiers[0])
-    root.style.setProperty('--tier-2', theme.tiers[1])
-    root.style.setProperty('--tier-3', theme.tiers[2])
-    root.style.setProperty('--tier-4', theme.tiers[3])
-    root.style.setProperty('--tier-5', theme.tiers[4])
+    root.style.setProperty('--brand-color', tiers[0])
+    tiers.forEach((c, i) => root.style.setProperty(`--tier-${i + 1}`, c))
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
+
+  const activeTiers = getActiveTiers()
 
   return (
     <div className="max-w-xl space-y-8">
@@ -125,8 +130,10 @@ export default function SettingsClient({ settings: initial }: Props) {
       {/* Color Theme */}
       <div>
         <Label>Color Theme</Label>
-        <p className="text-xs text-gray-600 mb-4">Sets accent color and progress ring tiers across the app.</p>
-        <div className="space-y-2">
+        <p className="text-xs text-gray-600 mb-4">Sets accent color and goal progress ring tiers.</p>
+
+        <div className="space-y-2 mb-4">
+          {/* Preset themes */}
           {COLOR_THEMES.map(theme => {
             const selected = colorTheme === theme.id
             return (
@@ -134,38 +141,76 @@ export default function SettingsClient({ settings: initial }: Props) {
                 key={theme.id}
                 onClick={() => setColorTheme(theme.id)}
                 className={`w-full flex items-center gap-4 p-3 rounded-xl border transition-all text-left ${
-                  selected
-                    ? 'border-white/30 bg-white/[0.04]'
-                    : 'border-white/[0.06] bg-white/[0.02] hover:border-white/10'
+                  selected ? 'border-white/30 bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/10'
                 }`}
               >
-                {/* Gradient bar */}
-                <div
-                  className="h-6 w-24 rounded-md flex-shrink-0"
-                  style={{ background: `linear-gradient(90deg, ${theme.tiers.join(', ')})` }}
-                />
-                {/* 5 dots */}
+                <div className="h-6 w-24 rounded-md flex-shrink-0" style={{ background: `linear-gradient(90deg, ${theme.tiers.join(', ')})` }} />
                 <div className="flex gap-1.5 flex-shrink-0">
                   {theme.tiers.map((color, i) => (
-                    <div
-                      key={i}
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}88` }}
-                    />
+                    <div key={i} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}88` }} />
                   ))}
                 </div>
-                {/* Name + desc */}
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-semibold ${selected ? 'text-white' : 'text-gray-300'}`}>{theme.name}</p>
                   <p className="text-xs text-gray-600 truncate">{theme.desc}</p>
                 </div>
-                {/* Selected indicator */}
-                {selected && (
-                  <div className="h-2 w-2 rounded-full bg-brand flex-shrink-0" />
-                )}
+                {selected && <div className="h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
               </button>
             )
           })}
+
+          {/* Custom theme option */}
+          <button
+            onClick={() => setColorTheme('custom')}
+            className={`w-full flex items-center gap-4 p-3 rounded-xl border transition-all text-left ${
+              colorTheme === 'custom' ? 'border-white/30 bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/10'
+            }`}
+          >
+            <div className="h-6 w-24 rounded-md flex-shrink-0 flex items-center justify-center border border-white/10 border-dashed">
+              <span className="text-gray-600 text-xs">Custom</span>
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-semibold ${colorTheme === 'custom' ? 'text-white' : 'text-gray-300'}`}>Custom</p>
+              <p className="text-xs text-gray-600">Enter your own 5 hex codes</p>
+            </div>
+            {colorTheme === 'custom' && <div className="h-2 w-2 rounded-full bg-brand flex-shrink-0" />}
+          </button>
+        </div>
+
+        {/* Custom tier inputs */}
+        {colorTheme === 'custom' && (
+          <div className="space-y-2 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            {customTiers.map((color, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-6 w-6 rounded-md flex-shrink-0 border border-white/10" style={{ backgroundColor: color }} />
+                <input
+                  value={color}
+                  onChange={e => {
+                    const next = [...customTiers] as typeof customTiers
+                    next[i] = e.target.value
+                    setCustomTiers(next)
+                  }}
+                  placeholder="#000000"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-brand focus:outline-none"
+                />
+                <span className="text-xs text-gray-600 w-32 shrink-0">{TIER_LABELS[i].split('—')[0].trim()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Live preview */}
+        <div className="mt-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Preview</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            {activeTiers.map((color, i) => (
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                <div className="h-8 w-8 rounded-lg" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}66` }} />
+                <span className="text-[9px] text-gray-600">{[90,70,50,30,10][i]}%+</span>
+              </div>
+            ))}
+            <div className="flex-1 h-2 rounded-full ml-2" style={{ background: `linear-gradient(90deg, ${activeTiers.join(', ')})` }} />
+          </div>
         </div>
       </div>
 
@@ -179,9 +224,7 @@ export default function SettingsClient({ settings: initial }: Props) {
           >
             <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${showLb ? 'translate-x-5' : 'translate-x-0.5'}`} />
           </div>
-          <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
-            Show leaderboard to reps
-          </span>
+          <span className="text-sm text-gray-300 group-hover:text-white transition-colors">Show leaderboard to reps</span>
         </label>
         <p className="text-xs text-gray-600 mt-2">When on, reps can see the full team leaderboard on their dashboard.</p>
       </div>
