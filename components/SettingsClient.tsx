@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Settings, Goal, GoalMetric, Profile } from '@/lib/supabase'
 import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
@@ -16,6 +16,84 @@ const GOAL_METRICS: { metric: GoalMetric; label: string; placeholder: string }[]
 ]
 
 const TIER_LABELS = ['Tier 1 — Crushing It (90–100%)', 'Tier 2 — Strong (70–89%)', 'Tier 3 — On Track (50–69%)', 'Tier 4 — Needs Work (30–49%)', 'Tier 5 — Struggling (0–29%)']
+
+function ThemeDropdown({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const selected = value === 'custom' ? null : COLOR_THEMES.find(t => t.id === value)
+  const selectedTiers = selected?.tiers ?? null
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-left hover:border-white/20 transition-colors"
+      >
+        {selectedTiers ? (
+          <div className="flex gap-0.5 rounded overflow-hidden flex-shrink-0">
+            {selectedTiers.map((c, i) => <div key={i} className="h-5 w-5" style={{ backgroundColor: c }} />)}
+          </div>
+        ) : (
+          <div className="h-5 w-[100px] rounded border border-white/10 border-dashed flex items-center justify-center flex-shrink-0">
+            <span className="text-gray-600 text-[10px]">Custom</span>
+          </div>
+        )}
+        <span className="flex-1 text-sm text-white font-medium">{selected?.name ?? 'Custom'}</span>
+        <svg className={`text-gray-500 transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {/* Options panel */}
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-[#0f0f0f] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+          <div className="max-h-72 overflow-y-auto">
+            {COLOR_THEMES.map(theme => {
+              const isSelected = value === theme.id
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => { onChange(theme.id); setOpen(false) }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.04] transition-colors ${isSelected ? 'bg-white/[0.03]' : ''}`}
+                >
+                  <div className="flex gap-0.5 rounded overflow-hidden flex-shrink-0">
+                    {theme.tiers.map((c, i) => <div key={i} className="h-5 w-5" style={{ backgroundColor: c }} />)}
+                  </div>
+                  <span className={`flex-1 text-sm ${isSelected ? 'text-white font-semibold' : 'text-gray-300'}`}>{theme.name}</span>
+                  {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-brand flex-shrink-0" />}
+                </button>
+              )
+            })}
+            {/* Custom */}
+            <button
+              type="button"
+              onClick={() => { onChange('custom'); setOpen(false) }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.04] transition-colors ${value === 'custom' ? 'bg-white/[0.03]' : ''}`}
+            >
+              <div className="h-5 w-[100px] rounded border border-white/10 border-dashed flex items-center justify-center flex-shrink-0">
+                <span className="text-gray-600 text-[10px]">Custom</span>
+              </div>
+              <span className={`flex-1 text-sm ${value === 'custom' ? 'text-white font-semibold' : 'text-gray-300'}`}>Custom</span>
+              {value === 'custom' && <div className="h-1.5 w-1.5 rounded-full bg-brand flex-shrink-0" />}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -196,33 +274,13 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
       <div className="space-y-4">
         <div>
           <Label>Color Theme</Label>
-          {/* Dropdown */}
-          <div className="relative">
-            <select
-              value={colorTheme}
-              onChange={e => {
-                setColorTheme(e.target.value)
-                if (e.target.value !== 'custom') {
-                  setPrimaryColor(getTheme(e.target.value).tiers[0])
-                }
-              }}
-              className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-brand focus:outline-none pr-10"
-            >
-              {COLOR_THEMES.map(t => (
-                <option key={t.id} value={t.id} style={{ background: '#111' }}>{t.name}</option>
-              ))}
-              <option value="custom" style={{ background: '#111' }}>Custom</option>
-            </select>
-            {/* Swatch preview inside the dropdown trigger */}
-            <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 flex gap-0.5 overflow-hidden rounded">
-              {activeTiers.map((color, i) => (
-                <div key={i} className="h-4 w-4" style={{ backgroundColor: color }} />
-              ))}
-            </div>
-            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-          </div>
+          <ThemeDropdown
+            value={colorTheme}
+            onChange={id => {
+              setColorTheme(id)
+              if (id !== 'custom') setPrimaryColor(getTheme(id).tiers[0])
+            }}
+          />
         </div>
 
         {/* Custom tier inputs */}
