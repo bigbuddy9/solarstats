@@ -12,10 +12,11 @@ export default async function SettingsPage() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/login')
 
-  const [{ data: profile }, { data: settings }, { data: goals }] = await Promise.all([
+  const [{ data: profile }, { data: settings }, { data: goals }, { data: allProfiles }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', session.user.id).single(),
     supabase.from('settings').select('*').single(),
-    supabase.from('goals').select('*').is('rep_id', null),
+    supabase.from('goals').select('*'),
+    supabase.from('profiles').select('*'),
   ])
 
   if (profile?.role !== 'owner') redirect('/dashboard')
@@ -28,7 +29,11 @@ export default async function SettingsPage() {
           <h2 className="text-2xl font-bold text-white">Settings</h2>
           <p className="text-gray-500 text-sm mt-1">Branding and team preferences</p>
         </div>
-        <SettingsClient settings={settings as Settings} goals={(goals ?? []) as Goal[]} />
+        <SettingsClient
+          settings={settings as Settings}
+          goals={(goals ?? []) as Goal[]}
+          reps={(allProfiles ?? []).filter((p: Profile) => p.role === 'rep') as Profile[]}
+        />
       </main>
     </div>
   )

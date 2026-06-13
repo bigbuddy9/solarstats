@@ -137,7 +137,11 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
   const theme = getTheme(settings?.color_theme || 'cyan-aurora')
 
   function ring(metric: GoalMetric, actual: number): { goalPct?: number; goalColor?: string } {
-    const goal = goals.find(g => g.metric === metric && g.rep_id === null)
+    // Use per-rep goal when viewing a single rep, else team goal
+    const repId = !isOwner ? profile?.id : (selectedRep !== 'all' ? selectedRep : null)
+    const goal = repId
+      ? (goals.find(g => g.metric === metric && g.rep_id === repId) ?? goals.find(g => g.metric === metric && g.rep_id === null))
+      : goals.find(g => g.metric === metric && g.rep_id === null)
     if (!goal || goal.target <= 0) return {}
     const pct = Math.round((actual / goal.target) * 100)
     return { goalPct: pct, goalColor: getTierColor(theme, pct) }

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import type { Settings, Goal, GoalMetric } from '@/lib/supabase'
+import type { Settings, Goal, GoalMetric, Profile } from '@/lib/supabase'
 import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
 
 const GOAL_METRICS: { metric: GoalMetric; label: string; placeholder: string }[] = [
@@ -29,9 +29,9 @@ function inputCls() {
   return 'w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 text-sm transition-colors hover:border-white/20 focus:border-brand focus:outline-none'
 }
 
-interface Props { settings: Settings; goals: Goal[] }
+interface Props { settings: Settings; goals: Goal[]; reps: Profile[] }
 
-export default function SettingsClient({ settings: initial, goals: initialGoals }: Props) {
+export default function SettingsClient({ settings: initial, goals: initialGoals, reps }: Props) {
   const supabase = createClientComponentClient()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -45,7 +45,6 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
   const [saved,        setSaved]        = useState(false)
   const [error,        setError]        = useState('')
 
-  // Goals state: map of metric -> target string (for controlled inputs)
   const [teamGoals, setTeamGoals] = useState<Record<GoalMetric, string>>(() => {
     const init = {} as Record<GoalMetric, string>
     GOAL_METRICS.forEach(({ metric }) => {
@@ -54,6 +53,7 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
     })
     return init
   })
+  const [showRepBreakdown, setShowRepBreakdown] = useState(false)
   const [savingGoals, setSavingGoals] = useState(false)
   const [savedGoals, setSavedGoals] = useState(false)
 
@@ -99,21 +99,41 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
     setTimeout(() => setSaved(false), 3000)
   }
 
-  async function handleSaveGoals() {
+  function repTarget(metric: GoalMetric): number {
+    const val = parseFloat(teamGoals[metric])
+    if (!val || reps.length === 0) return 0
+    return Math.round((val / reps.length) * 10) / 10
+  }
+
+  async function handleSaveGoals(includeReps: boolean) {
     setSavingGoals(true)
     setError('')
-    const upserts = GOAL_METRICS
+    const teamUpserts = GOAL_METRICS
       .filter(({ metric }) => teamGoals[metric] !== '')
       .map(({ metric }) => ({
         metric,
         target: parseFloat(teamGoals[metric]) || 0,
-        rep_id: null,
+        rep_id: null as string | null,
       }))
+
+    const repUpserts = includeReps
+      ? reps.flatMap(rep =>
+          GOAL_METRICS
+            .filter(({ metric }) => teamGoals[metric] !== '')
+            .map(({ metric }) => ({
+              metric,
+              target: repTarget(metric),
+              rep_id: rep.id as string | null,
+            }))
+        )
+      : []
+
     const { error: err } = await supabase
       .from('goals')
-      .upsert(upserts, { onConflict: 'metric,rep_id' })
+      .upsert([...teamUpserts, ...repUpserts], { onConflict: 'metric,rep_id' })
     if (err) { setError(err.message); setSavingGoals(false); return }
     setSavingGoals(false)
+    setShowRepBreakdown(false)
     setSavedGoals(true)
     setTimeout(() => setSavedGoals(false), 3000)
   }
@@ -277,7 +297,7 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
       <div className="border-t border-white/[0.06] pt-8 mt-2">
         <div className="mb-6">
           <h3 className="text-base font-bold text-white">Monthly Goals</h3>
-          <p className="text-xs text-gray-500 mt-1">Set team targets. Progress rings on stat cards will reflect these.</p>
+          <p className="text-xs text-gray-500 mt-1">Set monthly targets for the whole team. We'll calculate what each rep needs to hit.</p>
         </div>
 
         {savedGoals && (
@@ -287,7 +307,9 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
           </div>
         )}
 
-        <div className="space-y-3">
+        {/* Team target inputs */}
+        <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Team Target</p>
+        <div className="space-y-3 mb-6">
           {GOAL_METRICS.map(({ metric, label, placeholder }) => (
             <div key={metric} className="flex items-center gap-4">
               <label className="text-sm text-gray-300 w-40 shrink-0">{label}</label>
@@ -295,7 +317,10 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
                 type="number"
                 min="0"
                 value={teamGoals[metric]}
-                onChange={e => setTeamGoals(prev => ({ ...prev, [metric]: e.target.value }))}
+                onChange={e => {
+                  setTeamGoals(prev => ({ ...prev, [metric]: e.target.value }))
+                  setShowRepBreakdown(false)
+                }}
                 placeholder={placeholder}
                 className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none placeholder-gray-700"
               />
@@ -303,13 +328,79 @@ export default function SettingsClient({ settings: initial, goals: initialGoals 
           ))}
         </div>
 
-        <button
-          onClick={handleSaveGoals}
-          disabled={savingGoals}
-          className="mt-5 w-full bg-white/5 border border-white/10 text-gray-300 font-bold py-3 rounded-xl hover:border-white/20 hover:text-white transition-colors disabled:opacity-50 text-sm tracking-wide uppercase"
-        >
-          {savingGoals ? 'Saving…' : 'Save Goals'}
-        </button>
+        {/* Per-rep breakdown */}
+        {reps.length > 0 && !showRepBreakdown && (
+          <button
+            onClick={() => setShowRepBreakdown(true)}
+            className="w-full mb-4 py-2.5 rounded-xl border border-white/10 text-gray-400 text-sm hover:border-white/20 hover:text-white transition-colors"
+          >
+            Calculate per-rep targets ({reps.length} rep{reps.length !== 1 ? 's' : ''}) →
+          </button>
+        )}
+
+        {showRepBreakdown && reps.length > 0 && (
+          <div className="mb-5 rounded-xl border border-white/[0.08] overflow-hidden">
+            <div className="px-4 py-3 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+                Per Rep — {reps.length} rep{reps.length !== 1 ? 's' : ''}
+              </p>
+              <p className="text-[11px] text-gray-600">Team target ÷ {reps.length}</p>
+            </div>
+
+            {/* Header row */}
+            <div className="grid gap-2 px-4 py-2 border-b border-white/[0.04]" style={{ gridTemplateColumns: `1fr repeat(${GOAL_METRICS.length}, minmax(0,1fr))` }}>
+              <span className="text-[11px] text-gray-600">Rep</span>
+              {GOAL_METRICS.map(({ label }) => (
+                <span key={label} className="text-[10px] text-gray-600 text-center truncate">{label}</span>
+              ))}
+            </div>
+
+            {reps.map((rep, i) => (
+              <div
+                key={rep.id}
+                className={`grid gap-2 px-4 py-3 items-center ${i < reps.length - 1 ? 'border-b border-white/[0.04]' : ''}`}
+                style={{ gridTemplateColumns: `1fr repeat(${GOAL_METRICS.length}, minmax(0,1fr))` }}
+              >
+                <span className="text-sm text-white font-medium truncate">{rep.name}</span>
+                {GOAL_METRICS.map(({ metric }) => {
+                  const t = repTarget(metric)
+                  return (
+                    <span key={metric} className={`text-sm text-center font-semibold ${t > 0 ? 'text-brand' : 'text-gray-600'}`}>
+                      {t > 0 ? t : '—'}
+                    </span>
+                  )
+                })}
+              </div>
+            ))}
+
+            <div className="px-4 py-3 bg-white/[0.02] border-t border-white/[0.06] flex gap-3">
+              <button
+                onClick={() => handleSaveGoals(true)}
+                disabled={savingGoals}
+                className="flex-1 bg-brand text-black font-bold py-2.5 rounded-lg text-sm tracking-wide uppercase disabled:opacity-50 hover:opacity-90 transition-opacity"
+              >
+                {savingGoals ? 'Saving…' : 'Approve & Save All'}
+              </button>
+              <button
+                onClick={() => handleSaveGoals(false)}
+                disabled={savingGoals}
+                className="flex-1 bg-white/5 border border-white/10 text-gray-300 font-bold py-2.5 rounded-lg text-sm tracking-wide uppercase disabled:opacity-50 hover:border-white/20 hover:text-white transition-colors"
+              >
+                Team Only
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!showRepBreakdown && (
+          <button
+            onClick={() => handleSaveGoals(false)}
+            disabled={savingGoals}
+            className="w-full bg-white/5 border border-white/10 text-gray-300 font-bold py-3 rounded-xl hover:border-white/20 hover:text-white transition-colors disabled:opacity-50 text-sm tracking-wide uppercase"
+          >
+            {savingGoals ? 'Saving…' : 'Save Team Goals'}
+          </button>
+        )}
       </div>
     </div>
   )
