@@ -1,9 +1,19 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import type { Settings } from '@/lib/supabase'
+import type { Settings, Goal, GoalMetric } from '@/lib/supabase'
 import { COLOR_THEMES, getTheme, type ColorTheme } from '@/lib/themes'
+
+const GOAL_METRICS: { metric: GoalMetric; label: string; placeholder: string }[] = [
+  { metric: 'total_sales',      label: 'Total Sales',       placeholder: '20' },
+  { metric: 'revenue',          label: 'Revenue ($)',        placeholder: '100000' },
+  { metric: 'appointments',     label: 'Appointments',       placeholder: '40' },
+  { metric: 'sat_rate',         label: 'Sat Rate (%)',       placeholder: '80' },
+  { metric: 'close_rate',       label: 'Close Rate (%)',     placeholder: '50' },
+  { metric: 'same_week_sales',  label: 'One Call Closes',    placeholder: '10' },
+  { metric: 'follow_up_sales',  label: 'Follow Up Sales',    placeholder: '10' },
+]
 
 const TIER_LABELS = ['Tier 1 — Crushing It (90–100%)', 'Tier 2 — Strong (70–89%)', 'Tier 3 — On Track (50–69%)', 'Tier 4 — Needs Work (30–49%)', 'Tier 5 — Struggling (0–29%)']
 
@@ -19,9 +29,9 @@ function inputCls() {
   return 'w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-600 text-sm transition-colors hover:border-white/20 focus:border-brand focus:outline-none'
 }
 
-interface Props { settings: Settings }
+interface Props { settings: Settings; goals: Goal[] }
 
-export default function SettingsClient({ settings: initial }: Props) {
+export default function SettingsClient({ settings: initial, goals: initialGoals }: Props) {
   const supabase = createClientComponentClient()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -34,6 +44,18 @@ export default function SettingsClient({ settings: initial }: Props) {
   const [saving,       setSaving]       = useState(false)
   const [saved,        setSaved]        = useState(false)
   const [error,        setError]        = useState('')
+
+  // Goals state: map of metric -> target string (for controlled inputs)
+  const [teamGoals, setTeamGoals] = useState<Record<GoalMetric, string>>(() => {
+    const init = {} as Record<GoalMetric, string>
+    GOAL_METRICS.forEach(({ metric }) => {
+      const found = initialGoals.find(g => g.metric === metric && g.rep_id === null)
+      init[metric] = found ? String(found.target) : ''
+    })
+    return init
+  })
+  const [savingGoals, setSavingGoals] = useState(false)
+  const [savedGoals, setSavedGoals] = useState(false)
 
   function getActiveTiers(): ColorTheme['tiers'] {
     if (colorTheme === 'custom') return customTiers
@@ -75,6 +97,25 @@ export default function SettingsClient({ settings: initial }: Props) {
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
+  }
+
+  async function handleSaveGoals() {
+    setSavingGoals(true)
+    setError('')
+    const upserts = GOAL_METRICS
+      .filter(({ metric }) => teamGoals[metric] !== '')
+      .map(({ metric }) => ({
+        metric,
+        target: parseFloat(teamGoals[metric]) || 0,
+        rep_id: null,
+      }))
+    const { error: err } = await supabase
+      .from('goals')
+      .upsert(upserts, { onConflict: 'metric,rep_id' })
+    if (err) { setError(err.message); setSavingGoals(false); return }
+    setSavingGoals(false)
+    setSavedGoals(true)
+    setTimeout(() => setSavedGoals(false), 3000)
   }
 
   const activeTiers = getActiveTiers()
@@ -236,6 +277,45 @@ export default function SettingsClient({ settings: initial }: Props) {
       >
         {saving ? 'Saving…' : 'Save Settings'}
       </button>
+
+      {/* Monthly Goals */}
+      <div className="border-t border-white/[0.06] pt-8 mt-2">
+        <div className="mb-6">
+          <h3 className="text-base font-bold text-white">Monthly Goals</h3>
+          <p className="text-xs text-gray-500 mt-1">Set team targets. Progress rings on stat cards will reflect these.</p>
+        </div>
+
+        {savedGoals && (
+          <div className="flex items-center gap-3 bg-green-400/10 border border-green-400/30 rounded-xl px-5 py-4 mb-4">
+            <div className="h-2 w-2 rounded-full bg-green-400 shrink-0" />
+            <p className="text-green-300 text-sm font-medium">Goals saved.</p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {GOAL_METRICS.map(({ metric, label, placeholder }) => (
+            <div key={metric} className="flex items-center gap-4">
+              <label className="text-sm text-gray-300 w-40 shrink-0">{label}</label>
+              <input
+                type="number"
+                min="0"
+                value={teamGoals[metric]}
+                onChange={e => setTeamGoals(prev => ({ ...prev, [metric]: e.target.value }))}
+                placeholder={placeholder}
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none placeholder-gray-700"
+              />
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={handleSaveGoals}
+          disabled={savingGoals}
+          className="mt-5 w-full bg-white/5 border border-white/10 text-gray-300 font-bold py-3 rounded-xl hover:border-white/20 hover:text-white transition-colors disabled:opacity-50 text-sm tracking-wide uppercase"
+        >
+          {savingGoals ? 'Saving…' : 'Save Goals'}
+        </button>
+      </div>
     </div>
   )
 }

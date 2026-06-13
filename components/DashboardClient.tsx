@@ -5,7 +5,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import StatsCard from '@/components/StatsCard'
 import Charts from '@/components/Charts'
 import CallsTable from '@/components/CallsTable'
-import type { Call, Settings, Profile } from '@/lib/supabase'
+import type { Call, Settings, Profile, Goal, GoalMetric } from '@/lib/supabase'
+import { getTheme, getTierColor } from '@/lib/themes'
 
 type Period = 'today' | 'week' | 'month' | 'year' | 'all'
 
@@ -85,9 +86,10 @@ interface Props {
   settings: Settings | null
   profile: Profile | null
   allProfiles: Profile[]
+  goals: Goal[]
 }
 
-export default function DashboardClient({ initialCalls, settings, profile, allProfiles }: Props) {
+export default function DashboardClient({ initialCalls, settings, profile, allProfiles, goals }: Props) {
   const supabase = createClientComponentClient()
   const [calls, setCalls] = useState<Call[]>(initialCalls)
   const [period, setPeriod] = useState<Period>('month')
@@ -131,6 +133,15 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
 
   const stats = computeStats(filtered)
   const reps = allProfiles.filter(p => p.role === 'rep')
+
+  const theme = getTheme(settings?.color_theme || 'cyan-aurora')
+
+  function ring(metric: GoalMetric, actual: number): { goalPct?: number; goalColor?: string } {
+    const goal = goals.find(g => g.metric === metric && g.rep_id === null)
+    if (!goal || goal.target <= 0) return {}
+    const pct = Math.round((actual / goal.target) * 100)
+    return { goalPct: pct, goalColor: getTierColor(theme, pct) }
+  }
 
   const PERIODS: { value: Period; label: string }[] = [
     { value: 'today', label: 'Today' },
@@ -221,10 +232,10 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Sales</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatsCard label="One Call Closes" value={stats.sameWeekSales.toString()} accent="yellow" />
-            <StatsCard label="Follow Up Sales" value={stats.followUpSales.toString()} accent="yellow" />
-            <StatsCard label="Total Sales" value={stats.totalSales.toString()} accent="yellow" />
-            <StatsCard label="Revenue" value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} accent="green" />
+            <StatsCard label="One Call Closes" value={stats.sameWeekSales.toString()} accent="yellow" {...ring('same_week_sales', stats.sameWeekSales)} />
+            <StatsCard label="Follow Up Sales" value={stats.followUpSales.toString()} accent="yellow" {...ring('follow_up_sales', stats.followUpSales)} />
+            <StatsCard label="Total Sales" value={stats.totalSales.toString()} accent="yellow" {...ring('total_sales', stats.totalSales)} />
+            <StatsCard label="Revenue" value={stats.totalRevenue > 0 ? `$${stats.totalRevenue.toLocaleString()}` : '$0'} accent="green" {...ring('revenue', stats.totalRevenue)} />
           </div>
         </div>
 
@@ -241,10 +252,10 @@ export default function DashboardClient({ initialCalls, settings, profile, allPr
         <div>
           <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Activity</p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-start">
-            <StatsCard label="Appointments" value={stats.confirmedBookings.toString()} />
+            <StatsCard label="Appointments" value={stats.confirmedBookings.toString()} {...ring('appointments', stats.confirmedBookings)} />
             <StatsCard label="Meetings Sat" value={stats.meetingsSat.toString()} />
-            <StatsCard label="Sat Rate" value={`${stats.satRate}%`} />
-            <StatsCard label="Close Rate" value={`${stats.closeRate}%`} />
+            <StatsCard label="Sat Rate" value={`${stats.satRate}%`} {...ring('sat_rate', stats.satRate)} />
+            <StatsCard label="Close Rate" value={`${stats.closeRate}%`} {...ring('close_rate', stats.closeRate)} />
             <StatsCard label="Cash / Finance" value={`${stats.cashSales} / ${stats.financeSales}`} sub={`${stats.cashPct}% cash · ${100 - stats.cashPct}% finance`} />
           </div>
         </div>

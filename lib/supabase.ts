@@ -46,3 +46,14 @@ export interface Settings {
   show_leaderboard_to_reps: boolean
   color_theme: string
 }
+
+export type GoalMetric =
+  | 'total_sales' | 'revenue' | 'sat_rate' | 'close_rate'
+  | 'appointments' | 'same_week_sales' | 'follow_up_sales'
+
+export interface Goal {
+  id: string
+  metric: GoalMetric
+  target: number
+  rep_id: string | null  // null = team goal
+}

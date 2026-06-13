@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Nav from '@/components/Nav'
 import SettingsClient from '@/components/SettingsClient'
-import type { Settings, Profile } from '@/lib/supabase'
+import type { Settings, Profile, Goal } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,9 +12,10 @@ export default async function SettingsPage() {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) redirect('/login')
 
-  const [{ data: profile }, { data: settings }] = await Promise.all([
+  const [{ data: profile }, { data: settings }, { data: goals }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', session.user.id).single(),
     supabase.from('settings').select('*').single(),
+    supabase.from('goals').select('*').is('rep_id', null),
   ])
 
   if (profile?.role !== 'owner') redirect('/dashboard')
@@ -27,7 +28,7 @@ export default async function SettingsPage() {
           <h2 className="text-2xl font-bold text-white">Settings</h2>
           <p className="text-gray-500 text-sm mt-1">Branding and team preferences</p>
         </div>
-        <SettingsClient settings={settings as Settings} />
+        <SettingsClient settings={settings as Settings} goals={(goals ?? []) as Goal[]} />
       </main>
     </div>
   )
