@@ -53,7 +53,18 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
     })
     return init
   })
-  const [showRepBreakdown, setShowRepBreakdown] = useState(false)
+  // repGoals[repId][metric] = target string
+  const [repGoals, setRepGoals] = useState<Record<string, Record<GoalMetric, string>>>(() => {
+    const init: Record<string, Record<GoalMetric, string>> = {}
+    reps.forEach(rep => {
+      init[rep.id] = {} as Record<GoalMetric, string>
+      GOAL_METRICS.forEach(({ metric }) => {
+        const found = initialGoals.find(g => g.metric === metric && g.rep_id === rep.id)
+        init[rep.id][metric] = found ? String(found.target) : ''
+      })
+    })
+    return init
+  })
   const [savingGoals, setSavingGoals] = useState(false)
   const [savedGoals, setSavedGoals] = useState(false)
 
@@ -99,15 +110,10 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
     setTimeout(() => setSaved(false), 3000)
   }
 
-  function repTarget(metric: GoalMetric): number {
-    const val = parseFloat(teamGoals[metric])
-    if (!val || reps.length === 0) return 0
-    return Math.round((val / reps.length) * 10) / 10
-  }
-
-  async function handleSaveGoals(includeReps: boolean) {
+  async function handleSaveGoals() {
     setSavingGoals(true)
     setError('')
+
     const teamUpserts = GOAL_METRICS
       .filter(({ metric }) => teamGoals[metric] !== '')
       .map(({ metric }) => ({
@@ -116,24 +122,21 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
         rep_id: null as string | null,
       }))
 
-    const repUpserts = includeReps
-      ? reps.flatMap(rep =>
-          GOAL_METRICS
-            .filter(({ metric }) => teamGoals[metric] !== '')
-            .map(({ metric }) => ({
-              metric,
-              target: repTarget(metric),
-              rep_id: rep.id as string | null,
-            }))
-        )
-      : []
+    const repUpserts = reps.flatMap(rep =>
+      GOAL_METRICS
+        .filter(({ metric }) => repGoals[rep.id]?.[metric] !== '')
+        .map(({ metric }) => ({
+          metric,
+          target: parseFloat(repGoals[rep.id]?.[metric] ?? '0') || 0,
+          rep_id: rep.id as string | null,
+        }))
+    )
 
     const { error: err } = await supabase
       .from('goals')
       .upsert([...teamUpserts, ...repUpserts], { onConflict: 'metric,rep_id' })
     if (err) { setError(err.message); setSavingGoals(false); return }
     setSavingGoals(false)
-    setShowRepBreakdown(false)
     setSavedGoals(true)
     setTimeout(() => setSavedGoals(false), 3000)
   }
@@ -294,113 +297,76 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
       </button>
 
       {/* Monthly Goals */}
-      <div className="border-t border-white/[0.06] pt-8 mt-2">
-        <div className="mb-6">
-          <h3 className="text-base font-bold text-white">Monthly Goals</h3>
-          <p className="text-xs text-gray-500 mt-1">Set monthly targets for the whole team. We'll calculate what each rep needs to hit.</p>
+      <div className="border-t border-white/[0.06] pt-8 mt-2 space-y-8">
+        <div>
+          <h3 className="text-base font-bold text-white mb-1">Monthly Goals</h3>
+          <p className="text-xs text-gray-500">Set targets for the team and for individual reps independently.</p>
         </div>
 
         {savedGoals && (
-          <div className="flex items-center gap-3 bg-green-400/10 border border-green-400/30 rounded-xl px-5 py-4 mb-4">
+          <div className="flex items-center gap-3 bg-green-400/10 border border-green-400/30 rounded-xl px-5 py-4">
             <div className="h-2 w-2 rounded-full bg-green-400 shrink-0" />
             <p className="text-green-300 text-sm font-medium">Goals saved.</p>
           </div>
         )}
 
-        {/* Team target inputs */}
-        <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Team Target</p>
-        <div className="space-y-3 mb-6">
-          {GOAL_METRICS.map(({ metric, label, placeholder }) => (
-            <div key={metric} className="flex items-center gap-4">
-              <label className="text-sm text-gray-300 w-40 shrink-0">{label}</label>
-              <input
-                type="number"
-                min="0"
-                value={teamGoals[metric]}
-                onChange={e => {
-                  setTeamGoals(prev => ({ ...prev, [metric]: e.target.value }))
-                  setShowRepBreakdown(false)
-                }}
-                placeholder={placeholder}
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none placeholder-gray-700"
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Per-rep breakdown */}
-        {reps.length > 0 && !showRepBreakdown && (
-          <button
-            onClick={() => setShowRepBreakdown(true)}
-            className="w-full mb-4 py-2.5 rounded-xl border border-white/10 text-gray-400 text-sm hover:border-white/20 hover:text-white transition-colors"
-          >
-            Calculate per-rep targets ({reps.length} rep{reps.length !== 1 ? 's' : ''}) →
-          </button>
-        )}
-
-        {showRepBreakdown && reps.length > 0 && (
-          <div className="mb-5 rounded-xl border border-white/[0.08] overflow-hidden">
-            <div className="px-4 py-3 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
-                Per Rep — {reps.length} rep{reps.length !== 1 ? 's' : ''}
-              </p>
-              <p className="text-[11px] text-gray-600">Team target ÷ {reps.length}</p>
-            </div>
-
-            {/* Header row */}
-            <div className="grid gap-2 px-4 py-2 border-b border-white/[0.04]" style={{ gridTemplateColumns: `1fr repeat(${GOAL_METRICS.length}, minmax(0,1fr))` }}>
-              <span className="text-[11px] text-gray-600">Rep</span>
-              {GOAL_METRICS.map(({ label }) => (
-                <span key={label} className="text-[10px] text-gray-600 text-center truncate">{label}</span>
-              ))}
-            </div>
-
-            {reps.map((rep, i) => (
-              <div
-                key={rep.id}
-                className={`grid gap-2 px-4 py-3 items-center ${i < reps.length - 1 ? 'border-b border-white/[0.04]' : ''}`}
-                style={{ gridTemplateColumns: `1fr repeat(${GOAL_METRICS.length}, minmax(0,1fr))` }}
-              >
-                <span className="text-sm text-white font-medium truncate">{rep.name}</span>
-                {GOAL_METRICS.map(({ metric }) => {
-                  const t = repTarget(metric)
-                  return (
-                    <span key={metric} className={`text-sm text-center font-semibold ${t > 0 ? 'text-brand' : 'text-gray-600'}`}>
-                      {t > 0 ? t : '—'}
-                    </span>
-                  )
-                })}
+        {/* Team goals */}
+        <div>
+          <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Team</p>
+          <div className="space-y-3">
+            {GOAL_METRICS.map(({ metric, label, placeholder }) => (
+              <div key={metric} className="flex items-center gap-4">
+                <label className="text-sm text-gray-300 w-40 shrink-0">{label}</label>
+                <input
+                  type="number" min="0"
+                  value={teamGoals[metric]}
+                  onChange={e => setTeamGoals(prev => ({ ...prev, [metric]: e.target.value }))}
+                  placeholder={placeholder}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none placeholder-gray-700"
+                />
               </div>
             ))}
+          </div>
+        </div>
 
-            <div className="px-4 py-3 bg-white/[0.02] border-t border-white/[0.06] flex gap-3">
-              <button
-                onClick={() => handleSaveGoals(true)}
-                disabled={savingGoals}
-                className="flex-1 bg-brand text-black font-bold py-2.5 rounded-lg text-sm tracking-wide uppercase disabled:opacity-50 hover:opacity-90 transition-opacity"
-              >
-                {savingGoals ? 'Saving…' : 'Approve & Save All'}
-              </button>
-              <button
-                onClick={() => handleSaveGoals(false)}
-                disabled={savingGoals}
-                className="flex-1 bg-white/5 border border-white/10 text-gray-300 font-bold py-2.5 rounded-lg text-sm tracking-wide uppercase disabled:opacity-50 hover:border-white/20 hover:text-white transition-colors"
-              >
-                Team Only
-              </button>
+        {/* Per-rep goals */}
+        {reps.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-widest mb-3">Per Rep</p>
+            <div className="space-y-6">
+              {reps.map(rep => (
+                <div key={rep.id}>
+                  <p className="text-sm font-semibold text-white mb-2">{rep.name}</p>
+                  <div className="space-y-2">
+                    {GOAL_METRICS.map(({ metric, label, placeholder }) => (
+                      <div key={metric} className="flex items-center gap-4">
+                        <label className="text-sm text-gray-500 w-40 shrink-0">{label}</label>
+                        <input
+                          type="number" min="0"
+                          value={repGoals[rep.id]?.[metric] ?? ''}
+                          onChange={e => setRepGoals(prev => ({
+                            ...prev,
+                            [rep.id]: { ...prev[rep.id], [metric]: e.target.value }
+                          }))}
+                          placeholder={placeholder}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none placeholder-gray-700"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {!showRepBreakdown && (
-          <button
-            onClick={() => handleSaveGoals(false)}
-            disabled={savingGoals}
-            className="w-full bg-white/5 border border-white/10 text-gray-300 font-bold py-3 rounded-xl hover:border-white/20 hover:text-white transition-colors disabled:opacity-50 text-sm tracking-wide uppercase"
-          >
-            {savingGoals ? 'Saving…' : 'Save Team Goals'}
-          </button>
-        )}
+        <button
+          onClick={handleSaveGoals}
+          disabled={savingGoals}
+          className="w-full bg-white/5 border border-white/10 text-gray-300 font-bold py-3 rounded-xl hover:border-white/20 hover:text-white transition-colors disabled:opacity-50 text-sm tracking-wide uppercase"
+        >
+          {savingGoals ? 'Saving…' : 'Save Goals'}
+        </button>
       </div>
     </div>
   )
