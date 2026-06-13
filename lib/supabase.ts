@@ -55,5 +55,5 @@ export interface Goal {
   id: string
   metric: GoalMetric
   target: number
-  rep_id: string | null  // null = team goal
+  scope: 'team' | 'rep'
 }

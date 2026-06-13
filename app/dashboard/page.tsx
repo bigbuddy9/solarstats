@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     supabase.from('profiles').select('*').eq('id', session.user.id).single(),
     supabase.from('calls').select('*').order('appointment_date', { ascending: false }),
     supabase.from('profiles').select('*'),
-    supabase.from('goals').select('*').is('rep_id', null),
+    supabase.from('goals').select('*'),
   ])
 
   return (

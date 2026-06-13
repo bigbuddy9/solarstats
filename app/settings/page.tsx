@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   const [{ data: profile }, { data: settings }, { data: goals }, { data: allProfiles }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', session.user.id).single(),
     supabase.from('settings').select('*').single(),
-    supabase.from('goals').select('*'),
+    supabase.from('goals').select('*').order('scope'),
     supabase.from('profiles').select('*'),
   ])
 
