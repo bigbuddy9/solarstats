@@ -7,6 +7,7 @@ import type { Call, CallOutcome } from '@/lib/supabase'
 interface CallsTableProps {
   calls: Call[]
   isOwner?: boolean
+  userId?: string
   onDelete?: (id: string) => void
 }
 
@@ -35,7 +36,7 @@ function fmt(val: string) {
   return val.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
-export default function CallsTable({ calls, isOwner, onDelete }: CallsTableProps) {
+export default function CallsTable({ calls, isOwner, userId, onDelete }: CallsTableProps) {
   const supabase = createClientComponentClient()
   const [outcomeFilter, setOutcomeFilter] = useState<CallOutcome | 'all'>('all')
   const [dateFrom, setDateFrom] = useState('')
@@ -180,7 +181,7 @@ export default function CallsTable({ calls, isOwner, onDelete }: CallsTableProps
                                 )}
                               </>
                             )}
-                            {isOwner && (
+                            {(isOwner || call.user_id === userId) && (
                               <button
                                 onClick={e => { e.stopPropagation(); handleDelete(call.id) }}
                                 disabled={deleting === call.id}
