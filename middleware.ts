@@ -8,7 +8,7 @@ export async function middleware(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const pathname = req.nextUrl.pathname
 
-  if (!session && !pathname.startsWith('/login')) {
+  if (!session && !pathname.startsWith('/login') && !pathname.startsWith('/forgot-password') && !pathname.startsWith('/reset-password')) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
