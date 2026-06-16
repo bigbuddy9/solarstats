@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -56,6 +56,174 @@ const INTENT_LEVELS = [
   { value: 'hot',  label: 'Hot',  tip: 'This should close — just needs the right push' },
 ]
 
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const DAYS = ['Mo','Tu','We','Th','Fr','Sa','Su']
+const HOURS = [1,2,3,4,5,6,7,8,9,10,11,12]
+
+function DateTimePicker({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: boolean }) {
+  const now = new Date()
+  const parsed = value ? new Date(value) : now
+
+  const [open, setOpen] = useState(false)
+  const [viewYear, setViewYear] = useState(parsed.getFullYear())
+  const [viewMonth, setViewMonth] = useState(parsed.getMonth())
+  const [selDate, setSelDate] = useState<Date | null>(value ? parsed : null)
+  const [selHour, setSelHour] = useState<number | null>(value ? (parsed.getHours() % 12 || 12) : null)
+  const [selAmPm, setSelAmPm] = useState<'am' | 'pm'>(value ? (parsed.getHours() >= 12 ? 'pm' : 'am') : 'am')
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  function commit(date: Date | null, hour: number | null, ampm: 'am' | 'pm') {
+    if (!date || !hour) return
+    const d = new Date(date)
+    let h = hour % 12
+    if (ampm === 'pm') h += 12
+    d.setHours(h, 0, 0, 0)
+    onChange(d.toISOString())
+  }
+
+  function selectDate(d: Date) {
+    setSelDate(d)
+    commit(d, selHour, selAmPm)
+  }
+
+  function selectHour(h: number) {
+    setSelHour(h)
+    commit(selDate, h, selAmPm)
+  }
+
+  function selectAmPm(ap: 'am' | 'pm') {
+    setSelAmPm(ap)
+    commit(selDate, selHour, ap)
+  }
+
+  // Calendar grid
+  const firstDay = new Date(viewYear, viewMonth, 1)
+  const startDow = (firstDay.getDay() + 6) % 7 // Monday=0
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const cells: (number | null)[] = []
+  for (let i = 0; i < startDow; i++) cells.push(null)
+  for (let i = 1; i <= daysInMonth; i++) cells.push(i)
+
+  const displayValue = selDate && selHour
+    ? `${selDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} · ${selHour}${selAmPm}`
+    : selDate
+    ? `${selDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} · pick a time`
+    : 'Select date & time'
+
+  const isToday = (day: number) => {
+    const t = new Date()
+    return day === t.getDate() && viewMonth === t.getMonth() && viewYear === t.getFullYear()
+  }
+
+  const isSelected = (day: number) =>
+    selDate && day === selDate.getDate() && viewMonth === selDate.getMonth() && viewYear === selDate.getFullYear()
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className={`w-full bg-white/5 border ${error ? 'border-red-500' : open ? 'border-brand' : 'border-white/10'} rounded-lg px-4 py-3 text-sm text-left transition-colors hover:border-white/20 flex items-center justify-between`}
+      >
+        <span className={selDate && selHour ? 'text-white' : 'text-gray-600'}>{displayValue}</span>
+        <svg className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-2 bg-[#111] border border-white/10 rounded-2xl shadow-2xl p-4 w-full min-w-[320px]">
+          {/* Month nav */}
+          <div className="flex items-center justify-between mb-3">
+            <button type="button" onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y-1) } else setViewMonth(m => m-1) }}
+              className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <span className="text-sm font-semibold text-white">{MONTHS[viewMonth]} {viewYear}</span>
+            <button type="button" onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y+1) } else setViewMonth(m => m+1) }}
+              className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          {/* Day headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {DAYS.map(d => <div key={d} className="text-center text-[10px] font-semibold text-gray-600 py-1">{d}</div>)}
+          </div>
+
+          {/* Calendar cells */}
+          <div className="grid grid-cols-7 gap-y-0.5 mb-4">
+            {cells.map((day, i) => (
+              <div key={i} className="flex items-center justify-center">
+                {day ? (
+                  <button
+                    type="button"
+                    onClick={() => selectDate(new Date(viewYear, viewMonth, day))}
+                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-all
+                      ${isSelected(day) ? 'bg-brand text-black font-bold' :
+                        isToday(day) ? 'border border-brand/50 text-brand hover:bg-brand/10' :
+                        'text-gray-300 hover:bg-white/5 hover:text-white'}`}
+                  >
+                    {day}
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {/* Hour picker */}
+          <div className="border-t border-white/5 pt-3">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Time</p>
+            <div className="grid grid-cols-6 gap-1 mb-2">
+              {HOURS.map(h => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => selectHour(h)}
+                  className={`py-1.5 rounded-lg text-xs font-medium transition-all
+                    ${selHour === h ? 'bg-brand text-black font-bold' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {(['am', 'pm'] as const).map(ap => (
+                <button
+                  key={ap}
+                  type="button"
+                  onClick={() => selectAmPm(ap)}
+                  className={`py-1.5 rounded-lg text-xs font-semibold uppercase tracking-widest transition-all
+                    ${selAmPm === ap ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                  {ap}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selDate && selHour && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-3 w-full py-2 rounded-xl bg-brand text-black text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
+            >
+              Done
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -84,13 +252,14 @@ export default function CallForm({ userId, repName }: CallFormProps) {
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState('')
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting, isValid } } = useForm<FormData>({
+  const { register, handleSubmit, reset, control, setValue, watch, formState: { errors, isSubmitting, isValid } } = useForm<FormData>({
     resolver: zodResolver(schema),
     mode: 'all',
-    defaultValues: { appointment_date: new Date().toISOString().slice(0, 16) },
+    defaultValues: { appointment_date: '' },
   })
 
   const outcome = useWatch({ control, name: 'outcome' })
+  const apptDate = watch('appointment_date')
 
   async function onSubmit(data: FormData) {
     setServerError('')
@@ -124,7 +293,7 @@ export default function CallForm({ userId, repName }: CallFormProps) {
       address: '',
       phone: '',
       email: '',
-      appointment_date: new Date().toISOString().slice(0, 16),
+      appointment_date: '',
       outcome: undefined,
       disqualified_reason: undefined,
       no_sale_reason: undefined,
@@ -162,7 +331,11 @@ export default function CallForm({ userId, repName }: CallFormProps) {
         </div>
         <div>
           <Label>Appointment Date &amp; Time</Label>
-          <input type="datetime-local" {...register('appointment_date')} className={inputCls(!!errors.appointment_date)} />
+          <DateTimePicker
+            value={apptDate}
+            onChange={v => setValue('appointment_date', v, { shouldValidate: true })}
+            error={!!errors.appointment_date}
+          />
           <ErrMsg msg={errors.appointment_date?.message} />
         </div>
       </div>
