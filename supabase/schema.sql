@@ -1,19 +1,41 @@
--- Drop and rebuild everything
-drop table if exists calls cascade;
-drop table if exists settings cascade;
-drop table if exists profiles cascade;
+-- =====================================================================
+-- SolarStats — canonical database schema (multi-tenant)
+-- =====================================================================
+-- This file reflects the LIVE schema after all migrations.
+-- Tenancy model: each business = one row in `settings`. Every other
+-- table carries a `tenant_id` referencing settings(id). Isolation is
+-- enforced by RLS via get_tenant_id(), which resolves the current
+-- user's tenant from their profile row.
+-- =====================================================================
 
--- Profiles table (one per user)
-create table profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  name text not null,
-  role text not null default 'rep' check (role in ('rep', 'owner'))
+-- ---------------------------------------------------------------------
+-- Tables
+-- ---------------------------------------------------------------------
+
+-- Settings doubles as the "tenants" table — one row per business.
+create table if not exists settings (
+  id uuid primary key default gen_random_uuid(),
+  business_name text not null default 'Scale Solar',
+  logo_url text default '',
+  brand_color text default '#eab308',
+  color_theme text default 'cyan-aurora',
+  subdomain text unique,
+  show_leaderboard_to_reps boolean default false
 );
 
--- Calls table
-create table calls (
+-- Profiles (one per auth user), scoped to a tenant.
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  name text not null,
+  role text not null default 'rep' check (role in ('rep', 'owner')),
+  tenant_id uuid references settings(id) on delete cascade
+);
+
+-- Calls (appointments logged by reps), scoped to a tenant.
+create table if not exists calls (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz default now(),
+  tenant_id uuid references settings(id) on delete cascade,
   user_id uuid references profiles(id) on delete set null,
   rep_name text not null,
   homeowner_first_name text not null,
@@ -28,72 +50,140 @@ create table calls (
   follow_up_reason text default '',
   follow_up_intent text default '',
   system_size text default '',
-  deal_value text default ''
+  battery_size text default '0',
+  deal_value text default '',
+  sale_type text default 'same-week' check (sale_type in ('same-week','follow-up')),
+  payment_type text default 'finance' check (payment_type in ('cash','finance'))
 );
 
--- Settings table
-create table settings (
+-- Goals (monthly targets), scoped to a tenant. scope = 'team' | 'rep'.
+create table if not exists goals (
   id uuid primary key default gen_random_uuid(),
-  business_name text not null default 'Scale Solar',
-  logo_url text default '',
-  brand_color text default '#eab308',
-  subdomain text default ''
+  tenant_id uuid references settings(id) on delete cascade,
+  metric text not null,
+  target numeric not null,
+  scope text not null default 'team',
+  unique (metric, scope, tenant_id)
 );
 
--- RLS
-alter table profiles enable row level security;
-alter table calls enable row level security;
+-- ---------------------------------------------------------------------
+-- Indexes (matter once data grows)
+-- ---------------------------------------------------------------------
+create index if not exists idx_calls_tenant         on calls(tenant_id);
+create index if not exists idx_calls_user           on calls(user_id);
+create index if not exists idx_calls_tenant_appt    on calls(tenant_id, appointment_date);
+create index if not exists idx_profiles_tenant      on profiles(tenant_id);
+create index if not exists idx_goals_tenant         on goals(tenant_id);
+
+-- ---------------------------------------------------------------------
+-- Tenant resolver — current user's tenant_id from their profile
+-- ---------------------------------------------------------------------
+create or replace function get_tenant_id() returns uuid as $$
+  select tenant_id from profiles where id = auth.uid()
+$$ language sql security definer stable;
+
+-- ---------------------------------------------------------------------
+-- Row Level Security
+-- ---------------------------------------------------------------------
 alter table settings enable row level security;
+alter table profiles enable row level security;
+alter table calls    enable row level security;
+alter table goals    enable row level security;
 
--- Profiles: users can read/update their own, owners can read all
-create policy "Users can read own profile"
-  on profiles for select using (auth.uid() = id);
+-- Settings: read own tenant; owners update own tenant.
+drop policy if exists "Users read own tenant settings" on settings;
+create policy "Users read own tenant settings" on settings
+  for select using (id = get_tenant_id());
 
-create policy "Owners can read all profiles"
-  on profiles for select using (
+drop policy if exists "Owners update own tenant settings" on settings;
+create policy "Owners update own tenant settings" on settings
+  for update using (
+    id = get_tenant_id() and
     exists (select 1 from profiles where id = auth.uid() and role = 'owner')
   );
 
-create policy "Users can update own profile"
-  on profiles for update using (auth.uid() = id);
+-- Profiles: read tenant profiles; update own; owners insert into tenant.
+drop policy if exists "Users read own tenant profiles" on profiles;
+create policy "Users read own tenant profiles" on profiles
+  for select using (tenant_id = get_tenant_id());
 
--- Calls: reps see own, owners see all
-create policy "Reps can insert own calls"
-  on calls for insert with check (auth.uid() = user_id);
+drop policy if exists "Users update own profile" on profiles;
+create policy "Users update own profile" on profiles
+  for update using (id = auth.uid());
 
-create policy "Reps can read own calls"
-  on calls for select using (auth.uid() = user_id);
-
-create policy "Owners can read all calls"
-  on calls for select using (
+drop policy if exists "Owners insert profiles" on profiles;
+create policy "Owners insert profiles" on profiles
+  for insert with check (
+    tenant_id = get_tenant_id() and
     exists (select 1 from profiles where id = auth.uid() and role = 'owner')
   );
 
--- Settings: anyone authenticated can read
-create policy "Authenticated users can read settings"
-  on settings for select using (auth.role() = 'authenticated');
+-- Calls: reps insert/read/update/delete own; owners full access within tenant.
+drop policy if exists "Reps insert own calls" on calls;
+create policy "Reps insert own calls" on calls
+  for insert with check (auth.uid() = user_id and tenant_id = get_tenant_id());
 
+drop policy if exists "Users read tenant calls" on calls;
+create policy "Users read tenant calls" on calls
+  for select using (
+    tenant_id = get_tenant_id() and
+    (auth.uid() = user_id or exists (
+      select 1 from profiles where id = auth.uid() and role = 'owner' and tenant_id = get_tenant_id()
+    ))
+  );
+
+drop policy if exists "Reps update own calls" on calls;
+create policy "Reps update own calls" on calls
+  for update using (auth.uid() = user_id and tenant_id = get_tenant_id());
+
+drop policy if exists "Owners update tenant calls" on calls;
+create policy "Owners update tenant calls" on calls
+  for update using (
+    tenant_id = get_tenant_id() and
+    exists (select 1 from profiles where id = auth.uid() and role = 'owner')
+  );
+
+drop policy if exists "Reps delete own calls" on calls;
+create policy "Reps delete own calls" on calls
+  for delete using (auth.uid() = user_id and tenant_id = get_tenant_id());
+
+drop policy if exists "Owners delete tenant calls" on calls;
+create policy "Owners delete tenant calls" on calls
+  for delete using (
+    tenant_id = get_tenant_id() and
+    exists (select 1 from profiles where id = auth.uid() and role = 'owner')
+  );
+
+-- Goals: read tenant goals; owners manage tenant goals.
+drop policy if exists "Users read tenant goals" on goals;
+create policy "Users read tenant goals" on goals
+  for select using (tenant_id = get_tenant_id());
+
+drop policy if exists "Owners manage tenant goals" on goals;
+create policy "Owners manage tenant goals" on goals
+  for all using (
+    tenant_id = get_tenant_id() and
+    exists (select 1 from profiles where id = auth.uid() and role = 'owner')
+  ) with check (
+    tenant_id = get_tenant_id() and
+    exists (select 1 from profiles where id = auth.uid() and role = 'owner')
+  );
+
+-- ---------------------------------------------------------------------
 -- Realtime
+-- ---------------------------------------------------------------------
 alter publication supabase_realtime add table calls;
 
--- Default settings
-insert into settings (business_name, logo_url, brand_color, subdomain)
-values ('Scale Solar', '', '#eab308', 'main');
+-- ---------------------------------------------------------------------
+-- Storage: create a `logos` bucket (public read) in the Supabase
+-- dashboard. Logos are stored under `<tenant_id>/logo-<timestamp>.<ext>`.
+-- ---------------------------------------------------------------------
 
--- Function to auto-create profile on signup
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, name, role)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'name', new.email),
-    coalesce(new.raw_user_meta_data->>'role', 'rep')
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create or replace trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+-- =====================================================================
+-- Onboarding a new business (run as service role):
+--   1. insert into settings (business_name, subdomain, ...) returning id;
+--   2. create the owner auth user (Supabase admin API);
+--   3. insert into profiles (id, name, role, tenant_id)
+--      values (<auth uid>, '<name>', 'owner', <settings id>);
+--   4. owner logs in and sets goals / branding from the app.
+-- =====================================================================

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Call, CallOutcome } from '@/lib/supabase'
 
@@ -44,11 +44,11 @@ function iCls(err?: boolean) {
   return `w-full bg-white/5 border ${err ? 'border-red-500' : 'border-white/10'} rounded-lg px-3 py-2 text-white placeholder-gray-600 text-xs transition-colors hover:border-white/20 focus:border-brand`
 }
 
-function RadioGroup({ options, value, onChange, colored }: {
+function RadioGroup({ options, value, onChange, selectedCls }: {
   options: string[]
   value: string
   onChange: (v: string) => void
-  colored?: string
+  selectedCls?: string
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -59,7 +59,7 @@ function RadioGroup({ options, value, onChange, colored }: {
           onClick={() => onChange(o)}
           className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all
             ${value === o
-              ? colored ? `border-${colored}-500 text-${colored}-400 bg-${colored}-500/10` : 'border-brand bg-brand text-black'
+              ? selectedCls ?? 'border-brand bg-brand text-black'
               : 'border-white/10 text-gray-500 hover:border-white/20 hover:text-gray-300'}`}
         >
           {fmt(o)}
@@ -80,22 +80,31 @@ function EditForm({ call, onSave, onCancel }: { call: Call; onSave: (c: Call) =>
   const [systemSize, setSystemSize] = useState(call.system_size || '')
   const [batterySize, setBatterySize] = useState(call.battery_size || '')
   const [dealValue, setDealValue] = useState(call.deal_value || '')
+  // ISO → datetime-local value (YYYY-MM-DDTHH:mm) in local time
+  const [apptDate, setApptDate] = useState(() => {
+    const d = new Date(call.appointment_date)
+    if (isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSave() {
     setSaving(true)
     setError('')
+    const isClosed = outcome === 'closed'
     const updates = {
       outcome,
-      disqualified_reason: disqReason,
-      no_sale_reason: noSaleReason,
-      follow_up_reason: followUpReason,
-      sale_type: saleType,
-      payment_type: paymentType,
-      system_size: systemSize,
-      battery_size: batterySize,
-      deal_value: dealValue,
+      appointment_date: apptDate ? new Date(apptDate).toISOString() : call.appointment_date,
+      disqualified_reason: outcome === 'disqualified' ? disqReason : '',
+      no_sale_reason: outcome === 'no-sale' ? noSaleReason : '',
+      follow_up_reason: outcome === 'follow-up' ? followUpReason : '',
+      sale_type: isClosed ? saleType : 'same-week',
+      payment_type: isClosed ? paymentType : 'finance',
+      system_size: isClosed ? systemSize : '',
+      battery_size: isClosed ? batterySize : '0',
+      deal_value: isClosed ? dealValue : '',
     }
     const { error: err } = await supabase.from('calls').update(updates).eq('id', call.id)
     setSaving(false)
@@ -105,6 +114,17 @@ function EditForm({ call, onSave, onCancel }: { call: Call; onSave: (c: Call) =>
 
   return (
     <div className="space-y-4 pt-2" onClick={e => e.stopPropagation()}>
+      {/* Appointment date */}
+      <div>
+        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Appointment Date &amp; Time</p>
+        <input
+          type="datetime-local"
+          value={apptDate}
+          onChange={e => setApptDate(e.target.value)}
+          className={iCls()}
+        />
+      </div>
+
       {/* Outcome */}
       <div>
         <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Outcome</p>
@@ -126,7 +146,7 @@ function EditForm({ call, onSave, onCancel }: { call: Call; onSave: (c: Call) =>
       {outcome === 'disqualified' && (
         <div>
           <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Disqualified Reason</p>
-          <RadioGroup options={DISQ_REASONS} value={disqReason} onChange={setDisqReason} colored="red" />
+          <RadioGroup options={DISQ_REASONS} value={disqReason} onChange={setDisqReason} selectedCls="border-red-500 text-red-400 bg-red-500/10" />
         </div>
       )}
 
@@ -137,7 +157,7 @@ function EditForm({ call, onSave, onCancel }: { call: Call; onSave: (c: Call) =>
             options={OBJECTIONS}
             value={outcome === 'no-sale' ? noSaleReason : followUpReason}
             onChange={outcome === 'no-sale' ? setNoSaleReason : setFollowUpReason}
-            colored="orange"
+            selectedCls="border-orange-500 text-orange-400 bg-orange-500/10"
           />
         </div>
       )}
@@ -208,9 +228,8 @@ function EditForm({ call, onSave, onCancel }: { call: Call; onSave: (c: Call) =>
   )
 }
 
-export default function CallsTable({ calls: initialCalls, isOwner, userId, onDelete, onUpdate }: CallsTableProps) {
+export default function CallsTable({ calls, isOwner, userId, onDelete, onUpdate }: CallsTableProps) {
   const supabase = createClientComponentClient()
-  const [calls, setCalls] = useState<Call[]>(initialCalls)
   const [outcomeFilter, setOutcomeFilter] = useState<CallOutcome | 'all'>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -220,19 +239,14 @@ export default function CallsTable({ calls: initialCalls, isOwner, userId, onDel
   const [editing, setEditing] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  // Keep local calls in sync when parent updates
-  useMemo(() => setCalls(initialCalls), [initialCalls])
-
   async function handleDelete(id: string) {
     if (!confirm('Delete this call log? This cannot be undone.')) return
     setExpanded(null)
-    setCalls(prev => prev.filter(c => c.id !== id))
     onDelete?.(id)
     supabase.from('calls').delete().eq('id', id)
   }
 
   function handleSaved(updated: Call) {
-    setCalls(prev => prev.map(c => c.id === updated.id ? updated : c))
     onUpdate?.(updated)
     setEditing(null)
   }
@@ -315,9 +329,8 @@ export default function CallsTable({ calls: initialCalls, isOwner, userId, onDel
                   : call.system_size ? `${call.system_size} kW` : ''
 
                 return (
-                  <>
+                  <Fragment key={call.id}>
                     <tr
-                      key={call.id}
                       onClick={() => { setExpanded(isOpen ? null : call.id); setEditing(null) }}
                       className={`border-b border-white/5 cursor-pointer transition-colors ${isOpen ? 'bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}
                     >
@@ -397,7 +410,7 @@ export default function CallsTable({ calls: initialCalls, isOwner, userId, onDel
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>

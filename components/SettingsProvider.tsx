@@ -1,7 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, type Settings } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { type Settings } from '@/lib/supabase'
 import { getTheme } from '@/lib/themes'
 
 const SettingsContext = createContext<Settings | null>(null)
@@ -25,10 +26,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings | null>(null)
 
   useEffect(() => {
+    const supabase = createClientComponentClient()
     supabase
       .from('settings')
       .select('*')
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setSettings(data as Settings)

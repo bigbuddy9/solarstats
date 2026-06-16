@@ -167,7 +167,9 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
     setUploading(true)
     setError('')
     const ext = file.name.split('.').pop()
-    const path = `logo.${ext}`
+    // Namespace by tenant so businesses never overwrite each other's logo.
+    // Cache-bust with a timestamp so the new upload shows immediately.
+    const path = `${initial.id}/logo-${Date.now()}.${ext}`
     const { error: upErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true })
     if (upErr) { setError(upErr.message); setUploading(false); return }
     const { data } = supabase.storage.from('logos').getPublicUrl(path)

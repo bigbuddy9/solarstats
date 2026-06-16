@@ -80,6 +80,11 @@ function DateTimePicker({ value, onChange, error }: { value: string; onChange: (
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
+  // When the parent clears the field (e.g. after submit), reset the picker.
+  useEffect(() => {
+    if (!value) { setSelDate(null); setSelHour(null) }
+  }, [value])
+
   function commit(date: Date | null, hour: number | null, ampm: 'am' | 'pm') {
     if (!date || !hour) return
     const d = new Date(date)
