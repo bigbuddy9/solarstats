@@ -12,6 +12,7 @@ export interface Profile {
   id: string
   name: string
   role: UserRole
+  tenant_id: string
 }
 
 export interface Call {
@@ -56,4 +57,5 @@ export interface Goal {
   metric: GoalMetric
   target: number
   scope: 'team' | 'rep'
+  tenant_id: string
 }

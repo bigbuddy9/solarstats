@@ -245,9 +245,10 @@ function ErrMsg({ msg }: { msg?: string }) {
 interface CallFormProps {
   userId: string
   repName: string
+  tenantId: string
 }
 
-export default function CallForm({ userId, repName }: CallFormProps) {
+export default function CallForm({ userId, repName, tenantId }: CallFormProps) {
   const supabase = createClientComponentClient()
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState('')
@@ -267,6 +268,7 @@ export default function CallForm({ userId, repName }: CallFormProps) {
     const homeowner_first_name = nameParts[0]
     const homeowner_last_name = nameParts.slice(1).join(' ') || ''
     const { error } = await supabase.from('calls').insert([{
+      tenant_id: tenantId,
       user_id: userId,
       rep_name: repName,
       homeowner_first_name,

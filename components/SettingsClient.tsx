@@ -205,11 +205,11 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
     function buildUpserts(goals: Record<GoalMetric, string>, scope: 'team' | 'rep') {
       const manual = MANUAL_METRICS
         .filter(({ metric }) => goals[metric] !== '' && goals[metric] !== undefined)
-        .map(({ metric }) => ({ metric, target: parseFloat(goals[metric]) || 0, scope }))
+        .map(({ metric }) => ({ metric, target: parseFloat(goals[metric]) || 0, scope, tenant_id: initial.id }))
       const avgs = calcAverages(goals)
       const auto = (Object.entries(avgs) as [GoalMetric, number | undefined][])
         .filter(([, v]) => v !== undefined)
-        .map(([metric, target]) => ({ metric, target: target!, scope }))
+        .map(([metric, target]) => ({ metric, target: target!, scope, tenant_id: initial.id }))
       return [...manual, ...auto]
     }
 
@@ -220,7 +220,7 @@ export default function SettingsClient({ settings: initial, goals: initialGoals,
 
     const { error: err } = await supabase
       .from('goals')
-      .upsert(upserts, { onConflict: 'metric,scope' })
+      .upsert(upserts, { onConflict: 'metric,scope,tenant_id' })
     if (err) { setError(err.message); setSavingGoals(false); return }
     setSavingGoals(false)
     setSavedGoals(true)

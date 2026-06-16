@@ -29,6 +29,7 @@ export default async function LogCallPage() {
         <CallForm
           userId={session.user.id}
           repName={(profile as Profile | null)?.name ?? ''}
+          tenantId={(settings as Settings | null)?.id ?? ''}
         />
       </main>
     </div>

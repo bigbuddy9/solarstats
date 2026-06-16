@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
   // Verify caller is owner
   const { data: profile } = await supabase
-    .from('profiles').select('role').eq('id', session.user.id).single()
+    .from('profiles').select('role, tenant_id').eq('id', session.user.id).single()
   if (profile?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { name, email, password, role } = await req.json()
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   // Explicitly upsert profile in case the trigger doesn't fire
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .upsert({ id: newUser.user.id, name, role: role ?? 'rep' }, { onConflict: 'id' })
+    .upsert({ id: newUser.user.id, name, role: role ?? 'rep', tenant_id: profile.tenant_id }, { onConflict: 'id' })
 
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 400 })
 
