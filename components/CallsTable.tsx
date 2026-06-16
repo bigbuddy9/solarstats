@@ -9,6 +9,7 @@ interface CallsTableProps {
   isOwner?: boolean
   userId?: string
   onDelete?: (id: string) => void
+  onUpdate?: (call: Call) => void
 }
 
 const OUTCOME_BADGES: Record<CallOutcome, string> = {
@@ -29,6 +30,9 @@ const OUTCOME_LABELS: Record<CallOutcome, string> = {
 
 const ALL_OUTCOMES: CallOutcome[] = ['no-show', 'disqualified', 'no-sale', 'follow-up', 'closed']
 
+const DISQ_REASONS = ['bill-dnq', 'property-dnq', 'finance-dnq', 'other']
+const OBJECTIONS = ['price', 'think-about-it', 'compare-market', 'authority', 'timing', 'not-interested']
+
 type SortKey = 'appointment_date' | 'rep_name' | 'outcome'
 type SortDir = 'asc' | 'desc'
 
@@ -36,21 +40,201 @@ function fmt(val: string) {
   return val.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
-export default function CallsTable({ calls, isOwner, userId, onDelete }: CallsTableProps) {
+function iCls(err?: boolean) {
+  return `w-full bg-white/5 border ${err ? 'border-red-500' : 'border-white/10'} rounded-lg px-3 py-2 text-white placeholder-gray-600 text-xs transition-colors hover:border-white/20 focus:border-brand`
+}
+
+function RadioGroup({ options, value, onChange, colored }: {
+  options: string[]
+  value: string
+  onChange: (v: string) => void
+  colored?: string
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map(o => (
+        <button
+          key={o}
+          type="button"
+          onClick={() => onChange(o)}
+          className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all
+            ${value === o
+              ? colored ? `border-${colored}-500 text-${colored}-400 bg-${colored}-500/10` : 'border-brand bg-brand text-black'
+              : 'border-white/10 text-gray-500 hover:border-white/20 hover:text-gray-300'}`}
+        >
+          {fmt(o)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function EditForm({ call, onSave, onCancel }: { call: Call; onSave: (c: Call) => void; onCancel: () => void }) {
   const supabase = createClientComponentClient()
+  const [outcome, setOutcome] = useState<CallOutcome>(call.outcome)
+  const [disqReason, setDisqReason] = useState(call.disqualified_reason || '')
+  const [noSaleReason, setNoSaleReason] = useState(call.no_sale_reason || '')
+  const [followUpReason, setFollowUpReason] = useState(call.follow_up_reason || '')
+  const [saleType, setSaleType] = useState(call.sale_type || 'same-week')
+  const [paymentType, setPaymentType] = useState(call.payment_type || 'finance')
+  const [systemSize, setSystemSize] = useState(call.system_size || '')
+  const [batterySize, setBatterySize] = useState(call.battery_size || '')
+  const [dealValue, setDealValue] = useState(call.deal_value || '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    setSaving(true)
+    setError('')
+    const updates = {
+      outcome,
+      disqualified_reason: disqReason,
+      no_sale_reason: noSaleReason,
+      follow_up_reason: followUpReason,
+      sale_type: saleType,
+      payment_type: paymentType,
+      system_size: systemSize,
+      battery_size: batterySize,
+      deal_value: dealValue,
+    }
+    const { error: err } = await supabase.from('calls').update(updates).eq('id', call.id)
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSave({ ...call, ...updates })
+  }
+
+  return (
+    <div className="space-y-4 pt-2" onClick={e => e.stopPropagation()}>
+      {/* Outcome */}
+      <div>
+        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Outcome</p>
+        <div className="flex flex-wrap gap-1.5">
+          {ALL_OUTCOMES.map(o => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => setOutcome(o)}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all
+                ${outcome === o ? 'border-brand bg-brand text-black' : 'border-white/10 text-gray-500 hover:border-white/20 hover:text-gray-300'}`}
+            >
+              {OUTCOME_LABELS[o]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {outcome === 'disqualified' && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Disqualified Reason</p>
+          <RadioGroup options={DISQ_REASONS} value={disqReason} onChange={setDisqReason} colored="red" />
+        </div>
+      )}
+
+      {(outcome === 'no-sale' || outcome === 'follow-up') && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Main Objection</p>
+          <RadioGroup
+            options={OBJECTIONS}
+            value={outcome === 'no-sale' ? noSaleReason : followUpReason}
+            onChange={outcome === 'no-sale' ? setNoSaleReason : setFollowUpReason}
+            colored="orange"
+          />
+        </div>
+      )}
+
+      {outcome === 'closed' && (
+        <div className="space-y-3 p-3 rounded-xl bg-yellow-400/5 border border-yellow-400/20">
+          <div>
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Sale Type</p>
+            <div className="flex gap-1.5">
+              {[['same-week', 'One Call Close'], ['follow-up', 'Follow Up Sale']].map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setSaleType(v as 'same-week' | 'follow-up')}
+                  className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all
+                    ${saleType === v ? 'border-brand bg-brand text-black' : 'border-white/10 text-gray-500 hover:border-white/20'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Solar kW</p>
+              <input type="number" value={systemSize} onChange={e => setSystemSize(e.target.value)} className={iCls()} />
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Battery kW</p>
+              <input type="number" value={batterySize} onChange={e => setBatterySize(e.target.value)} className={iCls()} />
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Revenue ($)</p>
+              <input type="number" value={dealValue} onChange={e => setDealValue(e.target.value)} className={iCls()} />
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-2">Payment</p>
+            <div className="flex gap-1.5">
+              {['cash', 'finance'].map(p => (
+                <button key={p} type="button" onClick={() => setPaymentType(p as 'cash' | 'finance')}
+                  className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all capitalize
+                    ${paymentType === p ? 'border-brand bg-brand text-black' : 'border-white/10 text-gray-500 hover:border-white/20'}`}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-red-400 text-xs">{error}</p>}
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 py-1.5 rounded-lg bg-brand text-black text-xs font-bold uppercase tracking-widest hover:opacity-90 disabled:opacity-40 transition-opacity"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-1.5 rounded-lg border border-white/10 text-gray-500 text-xs font-medium hover:text-gray-300 hover:border-white/20 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function CallsTable({ calls: initialCalls, isOwner, userId, onDelete, onUpdate }: CallsTableProps) {
+  const supabase = createClientComponentClient()
+  const [calls, setCalls] = useState<Call[]>(initialCalls)
   const [outcomeFilter, setOutcomeFilter] = useState<CallOutcome | 'all'>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('appointment_date')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+
+  // Keep local calls in sync when parent updates
+  useMemo(() => setCalls(initialCalls), [initialCalls])
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this call log? This cannot be undone.')) return
     setExpanded(null)
+    setCalls(prev => prev.filter(c => c.id !== id))
     onDelete?.(id)
     supabase.from('calls').delete().eq('id', id)
+  }
+
+  function handleSaved(updated: Call) {
+    setCalls(prev => prev.map(c => c.id === updated.id ? updated : c))
+    onUpdate?.(updated)
+    setEditing(null)
   }
 
   const filtered = useMemo(() => {
@@ -76,6 +260,8 @@ export default function CallsTable({ calls, isOwner, userId, onDelete }: CallsTa
     if (sortKey !== col) return <span className="text-gray-600 ml-1">↕</span>
     return <span className="text-brand ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
   }
+
+  const canEdit = (call: Call) => isOwner || call.user_id === userId
 
   return (
     <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden">
@@ -122,6 +308,7 @@ export default function CallsTable({ calls, isOwner, userId, onDelete }: CallsTa
             <tbody>
               {filtered.map(call => {
                 const isOpen = expanded === call.id
+                const isEditOpen = editing === call.id
                 const detail = call.outcome === 'disqualified' ? fmt(call.disqualified_reason || '')
                   : call.outcome === 'no-sale' ? fmt(call.no_sale_reason || '')
                   : call.outcome === 'follow-up' ? fmt(call.follow_up_reason || '')
@@ -131,7 +318,7 @@ export default function CallsTable({ calls, isOwner, userId, onDelete }: CallsTa
                   <>
                     <tr
                       key={call.id}
-                      onClick={() => setExpanded(isOpen ? null : call.id)}
+                      onClick={() => { setExpanded(isOpen ? null : call.id); setEditing(null) }}
                       className={`border-b border-white/5 cursor-pointer transition-colors ${isOpen ? 'bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}
                     >
                       <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">
@@ -154,43 +341,59 @@ export default function CallsTable({ calls, isOwner, userId, onDelete }: CallsTa
                     {isOpen && (
                       <tr key={`${call.id}-expanded`} className="border-b border-white/5 bg-white/[0.03]">
                         <td colSpan={7} className="px-4 py-4">
-                          <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
-                            <div>
-                              <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Phone</p>
-                              <p className="text-sm text-white">{call.phone || '—'}</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Email</p>
-                              <p className="text-sm text-white">{call.email || '—'}</p>
-                            </div>
-                            {call.outcome === 'closed' && (
-                              <>
-                                <div>
-                                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Sale Type</p>
-                                  <p className="text-sm text-white">{call.sale_type === 'same-week' ? 'One Call Close' : 'Follow Up Sale'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Payment</p>
-                                  <p className="text-sm text-white capitalize">{call.payment_type || '—'}</p>
-                                </div>
-                                {call.battery_size && Number(call.battery_size) > 0 && (
+                          {isEditOpen ? (
+                            <EditForm
+                              call={call}
+                              onSave={handleSaved}
+                              onCancel={() => setEditing(null)}
+                            />
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+                              <div>
+                                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Phone</p>
+                                <p className="text-sm text-white">{call.phone || '—'}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Email</p>
+                                <p className="text-sm text-white">{call.email || '—'}</p>
+                              </div>
+                              {call.outcome === 'closed' && (
+                                <>
                                   <div>
-                                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Battery kW</p>
-                                    <p className="text-sm text-white">{call.battery_size}</p>
+                                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Sale Type</p>
+                                    <p className="text-sm text-white">{call.sale_type === 'same-week' ? 'One Call Close' : 'Follow Up Sale'}</p>
                                   </div>
-                                )}
-                              </>
-                            )}
-                            {(isOwner || call.user_id === userId) && (
-                              <button
-                                onClick={e => { e.stopPropagation(); handleDelete(call.id) }}
-                                disabled={deleting === call.id}
-                                className="ml-auto text-xs text-gray-600 hover:text-red-400 transition-colors border border-white/10 hover:border-red-500/40 px-3 py-1.5 rounded-lg disabled:opacity-40"
-                              >
-                                {deleting === call.id ? 'Deleting…' : 'Delete Record'}
-                              </button>
-                            )}
-                          </div>
+                                  <div>
+                                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Payment</p>
+                                    <p className="text-sm text-white capitalize">{call.payment_type || '—'}</p>
+                                  </div>
+                                  {call.battery_size && Number(call.battery_size) > 0 && (
+                                    <div>
+                                      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-0.5">Battery kW</p>
+                                      <p className="text-sm text-white">{call.battery_size}</p>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              {canEdit(call) && (
+                                <div className="ml-auto flex items-center gap-2">
+                                  <button
+                                    onClick={e => { e.stopPropagation(); setEditing(call.id) }}
+                                    className="text-xs text-gray-600 hover:text-white transition-colors border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={e => { e.stopPropagation(); handleDelete(call.id) }}
+                                    disabled={deleting === call.id}
+                                    className="text-xs text-gray-600 hover:text-red-400 transition-colors border border-white/10 hover:border-red-500/40 px-3 py-1.5 rounded-lg disabled:opacity-40"
+                                  >
+                                    {deleting === call.id ? 'Deleting…' : 'Delete'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
