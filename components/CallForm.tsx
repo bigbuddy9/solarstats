@@ -311,9 +311,9 @@ export default function CallForm({ userId, repName }: CallFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
       {success && (
-        <div className="flex items-center gap-3 bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-5 py-4">
-          <div className="h-2 w-2 rounded-full bg-yellow-400 shrink-0" />
-          <p className="text-yellow-300 text-sm font-medium">Logged. On to the next one.</p>
+        <div className="flex items-center gap-3 rounded-xl px-5 py-4" style={{ background: 'color-mix(in srgb, var(--brand-color) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--brand-color) 30%, transparent)' }}>
+          <div className="h-2 w-2 rounded-full shrink-0" style={{ background: 'var(--brand-color)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--brand-color)' }}>Logged. On to the next one.</p>
         </div>
       )}
       {serverError && (
