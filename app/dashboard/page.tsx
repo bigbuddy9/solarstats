@@ -21,6 +21,17 @@ export default async function DashboardPage() {
     supabase.from('goals').select('*'),
   ])
 
+  // Scaling guard: the dashboard loads every call for the tenant and aggregates
+  // in JS. That's fine into the low thousands. When a tenant crosses these
+  // thresholds it's time to move aggregation server-side and paginate the table.
+  // These warnings surface in the Vercel logs as an early heads-up.
+  const callCount = calls?.length ?? 0
+  if (callCount >= 5000) {
+    console.warn(`[SCALE] Tenant ${profile?.tenant_id} has ${callCount} calls — move dashboard aggregation server-side and paginate the calls table.`)
+  } else if (callCount >= 2000) {
+    console.warn(`[SCALE] Tenant ${profile?.tenant_id} has ${callCount} calls — approaching the point where pagination/server-side stats are worth adding.`)
+  }
+
   return (
     <div className="min-h-screen bg-black">
       <Nav settings={settings as Settings | null} profile={profile as Profile | null} />
